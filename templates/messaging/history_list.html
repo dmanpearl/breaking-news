@@ -5,9 +5,13 @@
     <div class="history-headline">{{ msg.headline }}</div>
     <div class="history-meta">
       {{ msg.created_at|date:"M j, Y" }}
-      <span class="history-badge {% if msg.sent %}sent{% endif %}">
-        {% if msg.sent %}Sent{% else %}Draft{% endif %}
-      </span>
+      {% if msg.sent %}
+        <span class="history-badge sent">Sent</span>
+      {% elif msg.last_error %}
+        <span class="history-badge error">Failed</span>
+      {% else %}
+        <span class="history-badge">Draft</span>
+      {% endif %}
     </div>
   </a>
   {% empty %}

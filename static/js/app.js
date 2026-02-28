@@ -15,18 +15,23 @@
 
   let warnTimer, countdownInterval;
   let countdownValue;
+  let warningVisible = false;
 
   function resetTimers() {
+    // Do NOT reset if the warning dialog is already showing —
+    // any user activity at that point should only affect Stay/Logout buttons.
+    if (warningVisible) return;
+
     clearTimeout(warnTimer);
-    clearInterval(countdownInterval);
-    overlay.classList.remove("visible");
     warnTimer = setTimeout(showWarning, warnAfterMs);
   }
 
   function showWarning() {
+    warningVisible = true;
     countdownValue = Math.ceil(warningMs / 1000);
     countdownEl.textContent = countdownValue;
     overlay.classList.add("visible");
+
     countdownInterval = setInterval(() => {
       countdownValue -= 1;
       countdownEl.textContent = countdownValue;
@@ -37,14 +42,26 @@
     }, 1000);
   }
 
-  stayBtn.addEventListener("click", resetTimers);
-  logoutBtn.addEventListener("click", () => { window.location.href = logoutUrl; });
+  function dismissWarning() {
+    warningVisible = false;
+    clearInterval(countdownInterval);
+    overlay.classList.remove("visible");
+    // Restart the idle watch from now
+    clearTimeout(warnTimer);
+    warnTimer = setTimeout(showWarning, warnAfterMs);
+  }
+
+  stayBtn.addEventListener("click", dismissWarning);
+  logoutBtn.addEventListener("click", () => {
+    window.location.href = logoutUrl;
+  });
 
   ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach((evt) => {
     document.addEventListener(evt, resetTimers, { passive: true });
   });
 
-  resetTimers();
+  // Kick off the initial idle timer
+  warnTimer = setTimeout(showWarning, warnAfterMs);
 })();
 
 // ── Connection status refresh ─────────────────────────────────────────────────

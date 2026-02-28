@@ -6,7 +6,9 @@
 
   <!-- Header -->
   <header class="app-header">
-    <div class="logo">BREAKING<span>NEWS</span></div>
+    <a href="{% url 'messaging:index' %}" class="logo">
+      <img src="{% static 'img/breaking-news.png' %}" alt="Breaking News" style="height:38px;width:auto;" />
+    </a>
 
     <!-- Connection status indicators -->
     <div id="conn-status-panel" class="conn-panel" style="background:transparent;border:none;padding:0 1rem;">
@@ -22,8 +24,8 @@
 
     <div class="header-spacer"></div>
     <nav class="header-nav">
-      <a href="{% url 'admin:index' %}">Admin</a>
-      <a href="{% url 'core:profile' %}">{{ user.username }}</a>
+      <a href="{% url 'admin:index' %}">⚙ System Admin</a>
+      <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
       <a href="{% url 'core:logout' %}">Log Out</a>
     </nav>
   </header>
@@ -33,7 +35,7 @@
     <div class="sidebar-header">
       <h2>History</h2>
       <a href="{% url 'messaging:create' %}" class="btn-create">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 1v10M1 6h10"/></svg>
         New
       </a>
     </div>

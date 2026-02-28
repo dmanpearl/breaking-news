@@ -2,7 +2,6 @@ import logging
 
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from connections.models import Connection
@@ -14,26 +13,26 @@ from .models import DeliveryReceipt, Message
 logger = logging.getLogger(__name__)
 
 
+def _base_context():
+    """Common context injected into every messaging view."""
+    return {
+        "history": Message.objects.all(),
+        "connections": Connection.objects.all(),
+    }
+
+
 @login_required
 def index(request):
-    history = Message.objects.all()
-    connections = Connection.objects.all()
-    return render(
-        request,
-        "messaging/index.html",
-        {"history": history, "connections": connections},
-    )
+    return render(request, "messaging/index.html", _base_context())
 
 
 @login_required
 def message_detail(request, pk):
     message = get_object_or_404(Message, pk=pk)
     receipts = message.receipts.select_related("connection").all()
-    return render(
-        request,
-        "messaging/message_view.html",
-        {"message": message, "receipts": receipts, "mode": "view"},
-    )
+    ctx = _base_context()
+    ctx.update({"message": message, "receipts": receipts, "mode": "view"})
+    return render(request, "messaging/message_view.html", ctx)
 
 
 @login_required
@@ -51,11 +50,9 @@ def message_create(request):
             return redirect("messaging:detail", pk=msg.pk)
     else:
         form = MessageForm()
-    return render(
-        request,
-        "messaging/message_view.html",
-        {"form": form, "mode": "create"},
-    )
+    ctx = _base_context()
+    ctx.update({"form": form, "mode": "create"})
+    return render(request, "messaging/message_view.html", ctx)
 
 
 @login_required
@@ -68,18 +65,15 @@ def message_edit(request, pk):
             action = request.POST.get("action", "save")
             if action == "send":
                 _send_message(request, msg)
-                # Also attempt to edit already-sent Discord messages
                 _edit_discord_messages(msg)
             flash.success(request, "Message updated.")
             return redirect("messaging:detail", pk=msg.pk)
     else:
         form = MessageForm(instance=message)
     receipts = message.receipts.select_related("connection").all()
-    return render(
-        request,
-        "messaging/message_view.html",
-        {"form": form, "message": message, "receipts": receipts, "mode": "edit"},
-    )
+    ctx = _base_context()
+    ctx.update({"form": form, "message": message, "receipts": receipts, "mode": "edit"})
+    return render(request, "messaging/message_view.html", ctx)
 
 
 @login_required
@@ -105,14 +99,17 @@ def message_delete(request, pk):
 
 @login_required
 def history_partial(request):
-    """Returns only the history list partial (for future HTMX / reactive use)."""
-    history = Message.objects.all()
-    return render(request, "messaging/history_list.html", {"history": history})
+    """Returns only the history list partial (for HTMX / reactive use)."""
+    return render(
+        request, "messaging/history_list.html", {"history": Message.objects.all()}
+    )
 
 
 def _send_message(request, message):
     try:
         dispatch_message(message)
+        if not message.sent and message.last_error:
+            flash.error(request, f"Send failed: {message.last_error}")
     except Exception as exc:
         logger.error("Dispatch error: %s", exc)
         flash.error(request, f"Send error: {exc}")
@@ -130,9 +127,16 @@ def _edit_discord_messages(message):
             and concrete.can_edit_sent
             and receipt.remote_message_id
         ):
+            image_path = None
+            if message.image:
+                try:
+                    image_path = message.image.path
+                except Exception:
+                    pass
             edit_discord_message(
                 concrete,
                 receipt.remote_message_id,
                 message.headline,
                 message.body,
+                image_path,
             )

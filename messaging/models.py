@@ -1,5 +1,6 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 from connections.models import Connection
 
 
@@ -8,6 +9,10 @@ class Message(models.Model):
     body = models.TextField()
     image = models.ImageField(upload_to="message_images/", blank=True, null=True)
     sent = models.BooleanField(default=False)
+    last_error = models.TextField(
+        blank=True,
+        help_text="Error detail from the most recent failed send attempt.",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

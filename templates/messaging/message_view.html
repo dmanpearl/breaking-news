@@ -48,11 +48,28 @@
 
   <div class="message-body">{{ message.body }}</div>
 
+  <!-- Send error banner -->
+  {% if message.last_error and not message.sent %}
+  <div class="flash error" style="margin-top:1rem;">
+    <strong>Last send failed:</strong><br>
+    <pre style="white-space:pre-wrap;font-size:0.8rem;margin-top:0.4rem;font-family:var(--mono);">{{ message.last_error }}</pre>
+  </div>
+  {% endif %}
+
   <!-- Delivery Metrics -->
   {% with summary=message.delivery_summary %}
   {% if summary.total > 0 %}
   <div class="delivery-section">
-    <h3>Delivery — {{ summary.success }}/{{ summary.total }} succeeded</h3>
+    <h3>
+      Delivery —
+      {% if summary.failed == 0 %}
+        <span style="color:#155724;">All {{ summary.total }} succeeded</span>
+      {% elif summary.success == 0 %}
+        <span style="color:var(--red);">All {{ summary.total }} failed</span>
+      {% else %}
+        <span style="color:var(--gold);">{{ summary.success }} of {{ summary.total }} succeeded</span>
+      {% endif %}
+    </h3>
     <table class="receipt-table">
       <thead>
         <tr>
@@ -72,9 +89,9 @@
           <td class="{% if r.success %}receipt-ok{% else %}receipt-fail{% endif %}">
             {% if r.success %}✓ OK{% else %}✗ Failed{% endif %}
           </td>
-          <td>{{ r.remote_message_id|default:"—" }}</td>
-          <td>{{ r.sent_at|date:"M j H:i" }}</td>
-          <td>{{ r.error|default:"—" }}</td>
+          <td style="font-family:var(--mono);font-size:0.72rem;">{{ r.remote_message_id|default:"—" }}</td>
+          <td style="font-family:var(--mono);font-size:0.72rem;">{{ r.sent_at|date:"M j H:i" }}</td>
+          <td style="font-family:var(--mono);font-size:0.72rem;color:var(--red);">{{ r.error|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>
