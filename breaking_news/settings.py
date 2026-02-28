@@ -1,5 +1,5 @@
 """
-Breaking News – Django settings
+Breaking News - Django settings
 Supports SQLite (dev) and PostgreSQL (Railway).
 """
 
@@ -110,3 +110,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 PHONENUMBER_DEFAULT_REGION = "US"
+
+# HTTPS / CSRF settings for production
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
