@@ -4,7 +4,7 @@
      class="history-item {% if active_id == msg.pk %}active{% endif %}">
     <div class="history-headline">{{ msg.headline }}</div>
     <div class="history-meta">
-      {{ msg.created_at|date:"M j, Y" }}
+      {{ msg.created_at|date:"M j, Y g:i a" }}
       {% if msg.sent %}
         <span class="history-badge sent">Sent</span>
       {% elif msg.last_error %}

@@ -5,10 +5,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from connections.models import Connection
-from connections.services import dispatch_message, edit_discord_message
+from connections.services import dispatch_message, update_sent_messages
 
 from .forms import MessageForm
-from .models import DeliveryReceipt, Message
+from .models import Message
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,9 @@ def message_create(request):
             msg.save()
             action = request.POST.get("action", "save")
             if action == "send":
-                _send_message(request, msg)
-            flash.success(request, "Message saved.")
+                _do_send(request, msg)
+            else:
+                flash.success(request, "Draft saved.")
             return redirect("messaging:detail", pk=msg.pk)
     else:
         form = MessageForm()
@@ -62,11 +63,14 @@ def message_edit(request, pk):
         form = MessageForm(request.POST, request.FILES, instance=message)
         if form.is_valid():
             msg = form.save()
-            action = request.POST.get("action", "save")
-            if action == "send":
-                _send_message(request, msg)
-                _edit_discord_messages(msg)
-            flash.success(request, "Message updated.")
+            if msg.sent:
+                # Message was previously delivered — edit it in-place on all
+                # destinations that support editing and have a stored message ID.
+                results = update_sent_messages(msg)
+                _report_edit_results(request, results)
+            else:
+                # Never successfully sent — treat Update as a fresh send.
+                _do_send(request, msg)
             return redirect("messaging:detail", pk=msg.pk)
     else:
         form = MessageForm(instance=message)
@@ -78,12 +82,11 @@ def message_edit(request, pk):
 
 @login_required
 def message_send(request, pk):
-    """POST-only: send (or resend) a message."""
+    """POST-only: (re)send a message to all enabled connections."""
     if request.method != "POST":
         return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
-    _send_message(request, message)
-    flash.success(request, "Message dispatched.")
+    _do_send(request, message)
     return redirect("messaging:detail", pk=pk)
 
 
@@ -105,38 +108,34 @@ def history_partial(request):
     )
 
 
-def _send_message(request, message):
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+
+def _do_send(request, message):
+    """Dispatch message to all enabled connections and flash results."""
     try:
         dispatch_message(message)
-        if not message.sent and message.last_error:
+        if message.sent:
+            flash.success(request, "Message sent successfully.")
+        else:
             flash.error(request, f"Send failed: {message.last_error}")
     except Exception as exc:
         logger.error("Dispatch error: %s", exc)
         flash.error(request, f"Send error: {exc}")
 
 
-def _edit_discord_messages(message):
-    """Attempt to edit Discord messages that support editing."""
-    receipts = DeliveryReceipt.objects.filter(
-        message=message, success=True
-    ).select_related("connection")
-    for receipt in receipts:
-        concrete = receipt.connection.get_concrete()
-        if (
-            concrete.connection_type == "discord"
-            and concrete.can_edit_sent
-            and receipt.remote_message_id
-        ):
-            image_path = None
-            if message.image:
-                try:
-                    image_path = message.image.path
-                except Exception:
-                    pass
-            edit_discord_message(
-                concrete,
-                receipt.remote_message_id,
-                message.headline,
-                message.body,
-                image_path,
-            )
+def _report_edit_results(request, results: dict):
+    """Flash success/failure for each connection edit attempt."""
+    if not results:
+        flash.warning(
+            request,
+            "No connections were updated. Check that destinations have "
+            "'Can edit sent' enabled and a stored message ID.",
+        )
+        return
+    ok = [name for name, (success, _) in results.items() if success]
+    failed = [(name, err) for name, (success, err) in results.items() if not success]
+    if ok:
+        flash.success(request, f"Updated on: {', '.join(ok)}")
+    for name, err in failed:
+        flash.error(request, f"Edit failed on {name}: {err}")
