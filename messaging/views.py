@@ -13,6 +13,7 @@ from connections.services import (
     dispatch_message,
     update_sent_messages,
 )
+from connections.services import dispatch_message, update_sent_messages
 
 from .forms import MessageForm
 from .models import Message
@@ -78,7 +79,8 @@ def message_edit(request, pk):
         if form.is_valid():
             msg = form.save()
             if msg.sent:
-                # Message was previously delivered — attempt in-place edits.
+                # Message was previously delivered — edit it in-place on all
+                # destinations that support editing and have a stored message ID.
                 results = update_sent_messages(msg)
                 _report_edit_results(request, results)
             else:
@@ -138,37 +140,17 @@ def _do_send(request, message):
 
 
 def _report_edit_results(request, results: dict):
-    """Flash a clear message for each connection edit outcome."""
+    """Flash success/failure for each connection edit attempt."""
     if not results:
         flash.warning(
             request,
-            "Local changes saved. No connections attempted — "
-            "either no messages have been sent yet, or all receipts are missing.",
+            "No connections were updated. Check that destinations have "
+            "'Can edit sent' enabled and a stored message ID.",
         )
         return
-
-    ok = [n for n, (s, _) in results.items() if s == EDIT_OK]
-    failed = [(n, e) for n, (s, e) in results.items() if s == EDIT_FAILED]
-    disabled = [(n, e) for n, (s, e) in results.items() if s == EDIT_SKIPPED_DISABLED]
-    no_id = [(n, e) for n, (s, e) in results.items() if s == EDIT_SKIPPED_NO_ID]
-
+    ok = [name for name, (success, _) in results.items() if success]
+    failed = [(name, err) for name, (success, err) in results.items() if not success]
     if ok:
-        flash.success(request, f"Discord updated on: {', '.join(ok)}.")
-
+        flash.success(request, f"Updated on: {', '.join(ok)}")
     for name, err in failed:
         flash.error(request, f"Edit failed on {name}: {err}")
-
-    for name, _ in disabled:
-        flash.warning(
-            request,
-            f"Local changes saved, but '{name}' was not updated in Discord — "
-            f"'Can edit sent' is disabled on that connection. "
-            f"Enable it in the admin panel to allow in-place Discord edits.",
-        )
-
-    for name, _ in no_id:
-        flash.warning(
-            request,
-            f"Local changes saved, but '{name}' could not be edited — "
-            f"no Discord message ID was stored for that delivery.",
-        )

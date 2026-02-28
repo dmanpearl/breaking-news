@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 def _build_embed(headline: str, body: str, with_attachment: bool = False) -> dict:
     embed = {"title": headline, "description": body, "color": 0xE63946}
     if with_attachment:
+        # References the multipart file part named "files[0]"
         embed["image"] = {"url": "attachment://upload.png"}
     return embed
 
@@ -59,12 +60,6 @@ def _parse_http_error(exc: requests.HTTPError) -> str:
     return f"HTTP {exc.response.status_code}: {detail}"
 
 
-def _webhook_base_url(webhook_url: str) -> str:
-    """Strip any query string from a webhook URL."""
-    url = webhook_url.rstrip("/")
-    return url[: url.index("?")] if "?" in url else url
-
-
 # ── Public API ────────────────────────────────────────────────────────────────
 
 
@@ -77,14 +72,19 @@ def send_to_discord(
     """
     Send a new message via Discord webhook.
 
-    ?wait=true makes Discord return the full message JSON so we can store
-    the message ID for future edits.
+    Uses ?wait=true so Discord returns the full message JSON including the
+    message ID we must store in order to edit the message later.
+
+    Images are uploaded as multipart form data — Discord cannot fetch relative
+    /media/ paths, so we push the bytes directly.
 
     Returns (success, discord_message_id, error_message).
     """
     embed = _build_embed(headline, body, with_attachment=bool(image_path))
     payload = {"embeds": [embed]}
-    url = _webhook_base_url(connection.webhook_url) + "?wait=true"
+    # ?wait=true is REQUIRED — without it Discord returns 204 No Content and
+    # we cannot retrieve the message ID needed for future edits.
+    url = connection.webhook_url.rstrip("/") + "?wait=true"
 
     try:
         if image_path:
@@ -130,35 +130,35 @@ def edit_discord_webhook_message(
     """
     Edit a previously sent Discord webhook message in-place.
 
-    Uses PATCH /webhooks/{id}/{token}/messages/{message_id}.
-    No bot token required — the webhook URL already encodes the credentials.
+    Uses the Webhook edit endpoint:
+        PATCH /webhooks/{webhook.id}/{webhook.token}/messages/{message.id}
+
+    This does NOT require a bot token — the webhook URL already encodes the
+    credentials. The message ID comes from the DeliveryReceipt stored when
+    the message was first sent via send_to_discord() with ?wait=true.
 
     Returns (success, error_message).
     """
     if not discord_message_id:
         return (
             False,
-            "No Discord message ID stored. The original message may have been sent "
-            "without ?wait=true, or the receipt was not saved.",
+            "No Discord message ID stored — message may not have been sent with ?wait=true.",
         )
 
-    edit_url = (
-        f"{_webhook_base_url(connection.webhook_url)}/messages/{discord_message_id}"
-    )
+    # Build the edit URL from the webhook URL by appending /messages/{id}
+    base_url = connection.webhook_url.rstrip("/")
+    # Strip any existing query string (e.g. ?wait=true) before appending path
+    if "?" in base_url:
+        base_url = base_url[: base_url.index("?")]
+    edit_url = f"{base_url}/messages/{discord_message_id}"
+
     embed = _build_embed(headline, body, with_attachment=bool(image_path))
     payload = {"embeds": [embed]}
-
-    # API v10 requires explicitly passing attachments: [] to clear old attachments
-    # when re-sending without an image, otherwise the old image stays.
-    if not image_path:
-        payload["attachments"] = []
 
     try:
         if image_path:
             resp = requests.patch(
-                edit_url,
-                files=_make_files_payload(image_path, payload),
-                timeout=30,
+                edit_url, files=_make_files_payload(image_path, payload), timeout=30
             )
         else:
             resp = requests.patch(edit_url, json=payload, timeout=10)
@@ -191,8 +191,10 @@ def dispatch_message(message) -> None:
     """
     Dispatch a Message to all enabled connections.
 
-    Stores the Discord message ID in DeliveryReceipt.remote_message_id so
-    future edits can PATCH the same Discord message in-place.
+    - Creates/updates a DeliveryReceipt per connection.
+    - Stores the Discord message ID in DeliveryReceipt.remote_message_id.
+    - Sets message.sent = True only when at least one connection succeeded.
+    - Sets message.last_error when all connections fail.
     """
     from messaging.models import DeliveryReceipt
 
@@ -246,23 +248,12 @@ def dispatch_message(message) -> None:
     message.save(update_fields=["sent", "last_error"])
 
 
-# Result status codes used by update_sent_messages
-EDIT_OK = "ok"
-EDIT_FAILED = "failed"
-EDIT_SKIPPED_DISABLED = "skipped_disabled"  # can_edit_sent is False
-EDIT_SKIPPED_NO_ID = "skipped_no_id"  # no stored message ID
-
-
-def update_sent_messages(message) -> dict[str, tuple[str, str]]:
+def update_sent_messages(message) -> dict:
     """
-    For a message that has already been sent, attempt to edit every Discord
-    destination in-place using the stored remote_message_id.
+    For a message that has already been sent, edit every Discord destination
+    that has a stored message ID and has can_edit_sent = True.
 
-    can_edit_sent = False on a connection means we skip it intentionally
-    (the local record is updated but Discord is not touched).
-
-    Returns {connection_name: (status_code, detail_string)}.
-    Status codes: EDIT_OK, EDIT_FAILED, EDIT_SKIPPED_DISABLED, EDIT_SKIPPED_NO_ID.
+    Returns a summary dict: {connection_name: (success, error)}.
     """
     from messaging.models import DeliveryReceipt
 
@@ -280,22 +271,12 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
 
     for receipt in receipts:
         concrete = receipt.connection.get_concrete()
-
         if concrete.connection_type != "discord":
             continue
-
         if not concrete.can_edit_sent:
-            results[concrete.name] = (
-                EDIT_SKIPPED_DISABLED,
-                "Editing disabled on this connection (can_edit_sent = False).",
-            )
             continue
-
         if not receipt.remote_message_id:
-            results[concrete.name] = (
-                EDIT_SKIPPED_NO_ID,
-                "No Discord message ID stored — cannot edit.",
-            )
+            results[concrete.name] = (False, "No stored message ID.")
             continue
 
         ok, err = edit_discord_webhook_message(
@@ -305,11 +286,10 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
             message.body,
             image_path,
         )
+        results[concrete.name] = (ok, err)
 
-        if ok:
-            results[concrete.name] = (EDIT_OK, "")
-        else:
-            results[concrete.name] = (EDIT_FAILED, err)
+        # Update the receipt error field if the edit failed
+        if not ok:
             receipt.error = f"Edit failed: {err}"
             receipt.save(update_fields=["error"])
 
