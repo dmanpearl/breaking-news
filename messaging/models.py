@@ -29,6 +29,24 @@ class Message(models.Model):
         return self.headline
 
     @property
+    def can_edit(self) -> bool:
+        """
+        A message is editable when:
+          - It has never been successfully sent (still a draft), OR
+          - At least one of its successful delivery connections has
+            can_edit_sent = True.
+
+        Unsent / failed messages are always editable because editing them
+        just updates the local record — nothing needs to change on Discord.
+        """
+        if not self.sent:
+            return True
+        return self.receipts.filter(
+            success=True,
+            connection__connectiondiscord__can_edit_sent=True,
+        ).exists()
+
+    @property
     def delivery_summary(self):
         receipts = self.receipts.all()
         total = receipts.count()

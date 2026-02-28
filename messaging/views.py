@@ -66,6 +66,13 @@ def message_create(request):
 @login_required
 def message_edit(request, pk):
     message = get_object_or_404(Message, pk=pk)
+    if not message.can_edit:
+        flash.error(
+            request,
+            "This message has been sent and none of its connections allow editing. "
+            "Enable Can edit sent on the connection in the admin panel.",
+        )
+        return redirect("messaging:detail", pk=pk)
     if request.method == "POST":
         form = MessageForm(request.POST, request.FILES, instance=message)
         if form.is_valid():

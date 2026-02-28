@@ -19,7 +19,11 @@
   </h1>
 
   {% if mode == "view" and message %}
-    <a href="{% url 'messaging:edit' message.pk %}" class="btn">Edit</a>
+    {% if message.can_edit %}
+      <a href="{% url 'messaging:edit' message.pk %}" class="btn">Edit</a>
+    {% else %}
+      <span class="btn" style="opacity:0.4;cursor:not-allowed;" title="Enable 'Can edit sent' on a connection to allow editing.">Edit</span>
+    {% endif %}
     <form method="post" action="{% url 'messaging:send' message.pk %}" style="display:inline;">
       {% csrf_token %}
       <button type="submit" class="btn btn-send">
