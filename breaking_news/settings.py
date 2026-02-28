@@ -60,15 +60,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "breaking_news.wsgi.application"
 
+import dj_database_url  # type: ignore
+
 DATABASE_URL = config("DATABASE_URL", default="")
 
 if DATABASE_URL:
-    try:
-        import dj_database_url  # type: ignore
-
-        DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
-    except ImportError:
-        pass
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
 else:
     DATABASES = {
         "default": {
