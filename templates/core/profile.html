@@ -1,0 +1,17 @@
+{% extends "messaging/layout.html" %}
+{% block page_title %}Profile{% endblock %}
+{% block main_content %}
+<div class="message-card">
+  <h2 style="font-family:var(--display);font-size:1.8rem;letter-spacing:.04em;margin-bottom:1rem;">{{ user.get_full_name }}</h2>
+  <table class="receipt-table">
+    <tr><th>Username</th><td>{{ user.username }}</td></tr>
+    <tr><th>Email</th><td>{{ user.email }}</td></tr>
+    <tr><th>Phone</th><td>{{ user.phone|default:"—" }}</td></tr>
+    <tr><th>Joined</th><td>{{ user.date_joined|date:"F j, Y" }}</td></tr>
+    <tr><th>Role</th><td>{% if user.is_superuser %}Superuser{% else %}{{ user.groups.all|join:", "|default:"No group" }}{% endif %}</td></tr>
+  </table>
+  <div style="margin-top:1.5rem;">
+    <a href="{% url 'core:logout' %}" class="btn btn-danger">Log Out</a>
+  </div>
+</div>
+{% endblock %}

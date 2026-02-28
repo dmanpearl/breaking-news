@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body %}
+<div class="app-shell">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">BREAKING<span>NEWS</span></div>
+
+    <!-- Connection status indicators -->
+    <div id="conn-status-panel" class="conn-panel" style="background:transparent;border:none;padding:0 1rem;">
+      {% for conn in connections %}
+      <div class="conn-chip {% if not conn.enabled %}disabled{% endif %}" data-conn-id="{{ conn.id }}" title="{{ conn.status_message }}">
+        <span class="dot {% if conn.enabled %}{{ conn.status }}{% endif %}"></span>
+        {{ conn.name }}
+      </div>
+      {% empty %}
+      <span style="font-family:var(--mono);font-size:0.7rem;color:#666;">No connections</span>
+      {% endfor %}
+    </div>
+
+    <div class="header-spacer"></div>
+    <nav class="header-nav">
+      <a href="{% url 'admin:index' %}">Admin</a>
+      <a href="{% url 'core:profile' %}">{{ user.username }}</a>
+      <a href="{% url 'core:logout' %}">Log Out</a>
+    </nav>
+  </header>
+
+  <!-- Sidebar / History -->
+  <aside class="app-sidebar">
+    <div class="sidebar-header">
+      <h2>History</h2>
+      <a href="{% url 'messaging:create' %}" class="btn-create">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        New
+      </a>
+    </div>
+    {% block sidebar_content %}{% endblock %}
+  </aside>
+
+  <!-- Main -->
+  <main class="app-main">
+    {% if messages %}
+    <div class="flash-messages">
+      {% for message in messages %}
+      <div class="flash {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block page_toolbar %}{% endblock %}
+    <div class="main-content">
+      {% block main_content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+{% endblock %}

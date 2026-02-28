@@ -1,0 +1,16 @@
+<div class="history-list">
+  {% for msg in history %}
+  <a href="{% url 'messaging:detail' msg.pk %}"
+     class="history-item {% if active_id == msg.pk %}active{% endif %}">
+    <div class="history-headline">{{ msg.headline }}</div>
+    <div class="history-meta">
+      {{ msg.created_at|date:"M j, Y" }}
+      <span class="history-badge {% if msg.sent %}sent{% endif %}">
+        {% if msg.sent %}Sent{% else %}Draft{% endif %}
+      </span>
+    </div>
+  </a>
+  {% empty %}
+  <div style="padding:1.5rem 1rem;font-size:0.85rem;color:var(--grey);">No messages yet.</div>
+  {% endfor %}
+</div>

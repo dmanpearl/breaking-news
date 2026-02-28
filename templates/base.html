@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Breaking News{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+
+{% if user.is_authenticated %}
+<div
+  id="inactivity-overlay"
+  class="inactivity-overlay"
+  data-warn-after="{{ inactivity_warn_after_ms }}"
+  data-warning-duration="{{ inactivity_warning_ms }}"
+  data-logout-url="{% url 'core:logout' %}">
+  <div class="inactivity-dialog">
+    <h2>Still There?</h2>
+    <p>You'll be logged out due to inactivity in</p>
+    <div class="countdown" id="inactivity-countdown">45</div>
+    <button class="btn btn-primary" id="inactivity-stay">Stay Logged In</button>
+    <button class="btn btn-danger" id="inactivity-logout">Log Out</button>
+  </div>
+</div>
+{% endif %}
+
+<script src="{% static 'js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

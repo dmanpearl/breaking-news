@@ -1,0 +1,137 @@
+{% extends "messaging/layout.html" %}
+{% load static %}
+
+{% block title %}
+  {% if mode == "create" %}New Message{% elif mode == "edit" %}Edit: {{ message.headline }}{% else %}{{ message.headline }}{% endif %} – Breaking News
+{% endblock %}
+
+{% block sidebar_content %}
+  {% include "messaging/history_list.html" with active_id=message.pk %}
+{% endblock %}
+
+{% block page_toolbar %}
+<div class="main-toolbar">
+  <h1>
+    {% if mode == "create" %}New Message
+    {% elif mode == "edit" %}Edit Message
+    {% else %}{{ message.headline }}
+    {% endif %}
+  </h1>
+
+  {% if mode == "view" and message %}
+    <a href="{% url 'messaging:edit' message.pk %}" class="btn">Edit</a>
+    <form method="post" action="{% url 'messaging:send' message.pk %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-send">
+        {% if message.sent %}Resend{% else %}Send{% endif %}
+      </button>
+    </form>
+    <form method="post" action="{% url 'messaging:delete' message.pk %}" style="display:inline;"
+          onsubmit="return confirm('Delete this message?')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block main_content %}
+
+{% if mode == "view" and message %}
+<!-- ── VIEW MODE ── -->
+<div class="message-card">
+  <div class="message-headline">{{ message.headline }}</div>
+
+  {% if message.image %}
+  <img class="message-image" src="{{ message.image.url }}" alt="Attachment" />
+  {% endif %}
+
+  <div class="message-body">{{ message.body }}</div>
+
+  <!-- Delivery Metrics -->
+  {% with summary=message.delivery_summary %}
+  {% if summary.total > 0 %}
+  <div class="delivery-section">
+    <h3>Delivery — {{ summary.success }}/{{ summary.total }} succeeded</h3>
+    <table class="receipt-table">
+      <thead>
+        <tr>
+          <th>Destination</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Remote ID</th>
+          <th>Sent At</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in receipts %}
+        <tr>
+          <td>{{ r.connection.name }}</td>
+          <td>{{ r.connection.connection_type }}</td>
+          <td class="{% if r.success %}receipt-ok{% else %}receipt-fail{% endif %}">
+            {% if r.success %}✓ OK{% else %}✗ Failed{% endif %}
+          </td>
+          <td>{{ r.remote_message_id|default:"—" }}</td>
+          <td>{{ r.sent_at|date:"M j H:i" }}</td>
+          <td>{{ r.error|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="delivery-section">
+    <h3>Delivery</h3>
+    <p style="color:var(--grey);font-size:0.85rem;">Not yet sent.</p>
+  </div>
+  {% endif %}
+  {% endwith %}
+</div>
+
+{% else %}
+<!-- ── CREATE / EDIT MODE ── -->
+<div class="form-card">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label for="{{ form.headline.id_for_label }}">Headline</label>
+      {{ form.headline }}
+      {% if form.headline.errors %}
+        <div style="color:var(--red);font-size:0.8rem;margin-top:0.25rem;">{{ form.headline.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.body.id_for_label }}">Body</label>
+      {{ form.body }}
+      {% if form.body.errors %}
+        <div style="color:var(--red);font-size:0.8rem;margin-top:0.25rem;">{{ form.body.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.image.id_for_label }}">Image Attachment</label>
+      {% if message.image %}
+        <div style="margin-bottom:0.5rem;">
+          <img src="{{ message.image.url }}" style="max-height:120px;border:1px solid var(--border);" />
+        </div>
+      {% endif %}
+      {{ form.image }}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" name="action" value="save" class="btn btn-primary">Save Draft</button>
+      <button type="submit" name="action" value="send" class="btn btn-send">Save & Send</button>
+      {% if message %}
+        <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
+      {% else %}
+        <a href="{% url 'messaging:index' %}" class="btn">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% endblock %}
