@@ -47,24 +47,27 @@ class Connection(models.Model):
 
 
 class ConnectionDiscord(Connection):
-    """Discord-specific connection fields."""
+    """
+    Discord webhook connection.
+
+    Discord webhooks can always edit their own messages — no bot token needed.
+    The only requirement is that we stored the message ID returned by the
+    initial POST ?wait=true call (held in DeliveryReceipt.remote_message_id).
+
+    can_edit_sent: when True, the Update action will PATCH the existing Discord
+    message in-place rather than sending a new one.  Set to False if you want
+    edits to remain local-only (the Discord message will not change).
+    """
 
     webhook_url = models.URLField(
         help_text="Discord Incoming Webhook URL for this channel/server."
     )
-    bot_token = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Optional Bot token (needed for message editing).",
-    )
-    channel_id = models.CharField(
-        max_length=64,
-        blank=True,
-        help_text="Channel ID (required when using bot token to edit messages).",
-    )
     can_edit_sent = models.BooleanField(
         default=False,
-        help_text="Whether previously sent messages can be edited via this connection.",
+        help_text=(
+            "When enabled, editing a sent message will update it in Discord. "
+            "Requires the original Discord message ID to have been stored on send."
+        ),
     )
 
     class Meta:

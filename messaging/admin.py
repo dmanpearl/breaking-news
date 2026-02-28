@@ -35,14 +35,20 @@ class MessageAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_filter = ("sent",)
-    readonly_fields = ("sent", "created_at", "updated_at", "error_detail")
+    readonly_fields = (
+        "image_preview",
+        "sent",
+        "created_at",
+        "updated_at",
+        "error_detail",
+    )
     actions = [mark_unsent]
     inlines = [DeliveryReceiptInline]
 
     fieldsets = (
         (
             "Message",
-            {"fields": ("headline", "body", "image", "created_by")},
+            {"fields": ("headline", "body", "image", "image_preview", "created_by")},
         ),
         (
             "Status",
@@ -53,7 +59,17 @@ class MessageAdmin(admin.ModelAdmin):
         ),
     )
 
-    @admin.display(description="Error")
+    @admin.display(description="Image Preview")
+    def image_preview(self, obj):
+        if not obj.image:
+            return "—"
+        return format_html(
+            '<img src="{}" style="max-width:480px;max-height:320px;'
+            'object-fit:contain;border:1px solid #ddd;border-radius:4px;" />',
+            obj.image.url,
+        )
+
+    @admin.display(description="Status")
     def send_status_display(self, obj):
         if obj.sent:
             return format_html('<span style="color:#155724;">✓ Sent</span>')
