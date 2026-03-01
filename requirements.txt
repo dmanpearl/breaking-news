@@ -8,4 +8,6 @@ gunicorn>=21.2
 django-phonenumber-field>=7.3
 phonenumbers>=8.13
 dj-database-url>=2.1
+cloudinary>=1.36
+django-cloudinary-storage>=0.3.0
 black>=24.0

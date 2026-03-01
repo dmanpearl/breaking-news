@@ -17,9 +17,11 @@
 - [x] Allow Empty Message Text: Messages can be sent with only attachments (images only, not text).
 - [x] Paste Image Support: While editing a message with an image in the clipboard, keyboard paste auto-attaches the image.
 - [x] Drag and drop image support to add an image to a message.
+- [x] Fix Image Display Bug: Images cease to display in the app after sending, need to implement Cloudinary SAAS service.
 
 ## Open Items
 
+- [ ] Add eyeball button in password fields to view plaintext passwords (Login & Admin User Create)
 - [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
 - [ ] PDF: Support PDF file format attachments (check if Mike wants this).
 - [ ] Delete message capability.
