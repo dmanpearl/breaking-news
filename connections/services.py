@@ -1,5 +1,5 @@
 """
-Dispatcher services – send a Message to all enabled Connections
+Dispatcher services – send a Message to all enabled Connections.
 
 Discord webhook editing notes
 ------------------------------
@@ -44,9 +44,22 @@ def _attachment_filename(image_url: str) -> str:
     return f"upload{ext}"  # e.g. upload.gif, upload.jpg, upload.png
 
 
-def _build_embed(headline: str, body: str, attachment_name: str | None = None) -> dict:
+def _is_gif(image_url: str) -> bool:
+    """Return True if the image URL points to a GIF."""
+    from urllib.parse import urlparse
+    import os
+    ext = os.path.splitext(urlparse(image_url).path)[1].lower()
+    return ext == ".gif"
+
+
+def _build_embed(headline: str, body: str, attachment_name: str | None = None,
+                 is_gif: bool = False) -> dict:
     embed = {"title": headline, "description": body, "color": 0xE63946}
-    if attachment_name:
+    # GIFs must NOT be referenced inside the embed image field — Discord strips
+    # animation when an attachment is embedded that way and shows only the first
+    # frame. Sending the file alongside the embed (without the image reference)
+    # causes Discord to display the animated GIF below the embed automatically.
+    if attachment_name and not is_gif:
         embed["image"] = {"url": f"attachment://{attachment_name}"}
     return embed
 
@@ -122,7 +135,8 @@ def send_to_discord(
     Returns (success, discord_message_id, error_message).
     """
     attachment_name = _attachment_filename(image_url) if image_url else None
-    embed = _build_embed(headline, body, attachment_name=attachment_name)
+    gif = _is_gif(image_url) if image_url else False
+    embed = _build_embed(headline, body, attachment_name=attachment_name, is_gif=gif)
     payload = {"embeds": [embed]}
     url = _webhook_base_url(connection.webhook_url) + "?wait=true"
 
@@ -186,7 +200,8 @@ def edit_discord_webhook_message(
         f"{_webhook_base_url(connection.webhook_url)}/messages/{discord_message_id}"
     )
     attachment_name = _attachment_filename(image_url) if image_url else None
-    embed = _build_embed(headline, body, attachment_name=attachment_name)
+    gif = _is_gif(image_url) if image_url else False
+    embed = _build_embed(headline, body, attachment_name=attachment_name, is_gif=gif)
     payload = {"embeds": [embed]}
 
     # API v10 requires explicitly passing attachments: [] to clear old attachments
