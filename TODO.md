@@ -8,13 +8,14 @@
 - [x] History: Previous message view only displays Headline, Message, or Attachment if present.
 - [x] History: When Message has only an Attachment (no Headline, no Message), Implement a custom message title for the History View built from file type and file size of the attachment.
 - [x] Keyboard Enter/Return Key Sends message: when focus is in message editing field, the Enter key sends the message.
+- [x] Headline: Remove:
+  - [x] Headline: Add a Site Settings flag called headline_enable (default: False).
+  - [x] Headline: Remove Headline from Editor if headline_enable=False.
+  - [x] Headline: When headline_enable=False and a user edits a message with a Headline, prepend the Headline to the body separated by linefeeds.
+- [x] Auto-focus cursor in new message body after pressing "+ New" to help quickly type new messages.
 
 ## Open Items
 
-- [ ] Headline: Remove:
-  - [ ] Headline: Add a Site Settings flag called headline_enable (default: False).
-  - [ ] Headline: Remove Headline from Editor if headline_enable=False.
-  - [ ] Headline: When headline_enable=False and a user edits a message with a Headline, prepend the Headline to the body separated by linefeeds.
 - [ ] Instant Send: Idle mode is Create Message state, allowing immediate type and send.
 - [ ] Allow Empty Message Text: Messages can be sent with only attachments (images only, not text).
 - [ ] Paste Image Support: While editing a message with an image in the clipboard, keyboard paste auto-attaches the image.

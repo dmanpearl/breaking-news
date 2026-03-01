@@ -238,6 +238,13 @@
   }
 
   updateSendBtn();
+
+  // Auto-focus the first editable field on create/edit
+  if (headline) {
+    headline.focus();
+  } else if (body) {
+    body.focus();
+  }
 })();
 </script>
 {% endif %}
