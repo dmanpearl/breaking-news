@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | Breaking News Admin{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Breaking News Admin</a></h1>
+{% endblock %}
+
+{% block extrahead %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<style>
+  /* Scope pw-wrap layout for Django admin's own input styling */
+  #content .pw-wrap input[type="password"],
+  #content .pw-wrap input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
+</style>
+{% endblock %}
+
+{% block footer %}{{ block.super }}
+<script src="{% static 'js/app.js' %}"></script>
+{% endblock %}

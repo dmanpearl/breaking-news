@@ -505,3 +505,28 @@ a:hover { text-decoration: underline; }
   }
   .app-sidebar { max-height: 220px; }
 }
+
+/* ── Password visibility toggle ─────────────────────────────────────────── */
+.pw-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pw-wrap input[type="password"],
+.pw-wrap input[type="text"] {
+  flex: 1;
+  padding-right: 2.4rem !important;
+}
+.pw-eye {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  cursor: pointer;
+  color: var(--grey);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.pw-eye:hover { color: var(--ink); }
