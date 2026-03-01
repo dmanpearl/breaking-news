@@ -1,5 +1,5 @@
 """
-Dispatcher services – send a Message to all enabled Connections.
+Dispatcher services – send a Message to all enabled Connections
 
 Discord webhook editing notes
 ------------------------------
