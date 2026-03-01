@@ -20,8 +20,6 @@ permission gate, not a Discord concept.
 
 import json
 import logging
-import mimetypes
-
 import requests
 
 from .models import Connection, ConnectionDiscord, ConnectionStatus
@@ -32,21 +30,62 @@ logger = logging.getLogger(__name__)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def _build_embed(headline: str, body: str, with_attachment: bool = False) -> dict:
+def _attachment_filename(image_url: str) -> str:
+    """Return a normalised attachment filename that preserves the real extension.
+
+    Discord uses the filename in the attachment:// URL reference inside embeds,
+    so the name sent as the file and the name in the embed URL must match exactly.
+    A GIF uploaded as 'upload.png' will not render — the extension must be correct.
+    """
+    import os
+    from urllib.parse import urlparse
+    path = urlparse(image_url).path
+    ext = os.path.splitext(path)[1].lower() or ".png"
+    return f"upload{ext}"  # e.g. upload.gif, upload.jpg, upload.png
+
+
+def _build_embed(headline: str, body: str, attachment_name: str | None = None) -> dict:
     embed = {"title": headline, "description": body, "color": 0xE63946}
-    if with_attachment:
-        embed["image"] = {"url": "attachment://upload.png"}
+    if attachment_name:
+        embed["image"] = {"url": f"attachment://{attachment_name}"}
     return embed
 
 
-def _make_files_payload(image_path: str, payload: dict) -> dict:
-    """Return a requests `files` dict for multipart upload."""
-    with open(image_path, "rb") as fh:
-        file_bytes = fh.read()
-    mime, _ = mimetypes.guess_type(image_path)
-    mime = mime or "image/png"
+def _make_files_payload(image_url: str, payload: dict) -> dict:
+    """Return a requests multipart files dict with the image bytes.
+
+    If the URL is absolute (Cloudinary on Railway), fetch it over HTTP.
+    If the URL is relative (/media/... on local runserver), read the file
+    directly from MEDIA_ROOT — avoids the server having to fetch from itself.
+    """
+    import mimetypes
+    import os
+    from urllib.parse import urlparse
+    from django.conf import settings
+
+    parsed = urlparse(image_url)
+    if parsed.scheme:
+        # Absolute URL — fetch from CDN (Cloudinary on Railway)
+        resp = requests.get(image_url, timeout=30)
+        resp.raise_for_status()
+        file_bytes = resp.content
+        mime = resp.headers.get("Content-Type", "image/png").split(";")[0].strip()
+    else:
+        # Relative URL — read directly from local MEDIA_ROOT
+        # Strip the MEDIA_URL prefix to get just the relative file path
+        rel = parsed.path
+        media_url_prefix = settings.MEDIA_URL.rstrip("/")
+        if rel.startswith(media_url_prefix):
+            rel = rel[len(media_url_prefix):]
+        local_path = os.path.join(settings.MEDIA_ROOT, rel.lstrip("/"))
+        with open(local_path, "rb") as fh:
+            file_bytes = fh.read()
+        mime, _ = mimetypes.guess_type(local_path)
+        mime = mime or "image/png"
+
+    filename = _attachment_filename(image_url)
     return {
-        "files[0]": ("upload.png", file_bytes, mime),
+        "files[0]": (filename, file_bytes, mime),
         "payload_json": (None, json.dumps(payload), "application/json"),
     }
 
@@ -72,7 +111,7 @@ def send_to_discord(
     connection: ConnectionDiscord,
     headline: str,
     body: str,
-    image_path: str | None = None,
+    image_url: str | None = None,
 ) -> tuple[bool, str, str]:
     """
     Send a new message via Discord webhook.
@@ -82,14 +121,15 @@ def send_to_discord(
 
     Returns (success, discord_message_id, error_message).
     """
-    embed = _build_embed(headline, body, with_attachment=bool(image_path))
+    attachment_name = _attachment_filename(image_url) if image_url else None
+    embed = _build_embed(headline, body, attachment_name=attachment_name)
     payload = {"embeds": [embed]}
     url = _webhook_base_url(connection.webhook_url) + "?wait=true"
 
     try:
-        if image_path:
+        if image_url:
             resp = requests.post(
-                url, files=_make_files_payload(image_path, payload), timeout=30
+                url, files=_make_files_payload(image_url, payload), timeout=30
             )
         else:
             resp = requests.post(url, json=payload, timeout=10)
@@ -125,7 +165,7 @@ def edit_discord_webhook_message(
     discord_message_id: str,
     headline: str,
     body: str,
-    image_path: str | None = None,
+    image_url: str | None = None,
 ) -> tuple[bool, str]:
     """
     Edit a previously sent Discord webhook message in-place.
@@ -145,19 +185,20 @@ def edit_discord_webhook_message(
     edit_url = (
         f"{_webhook_base_url(connection.webhook_url)}/messages/{discord_message_id}"
     )
-    embed = _build_embed(headline, body, with_attachment=bool(image_path))
+    attachment_name = _attachment_filename(image_url) if image_url else None
+    embed = _build_embed(headline, body, attachment_name=attachment_name)
     payload = {"embeds": [embed]}
 
     # API v10 requires explicitly passing attachments: [] to clear old attachments
     # when re-sending without an image, otherwise the old image stays.
-    if not image_path:
+    if not image_url:
         payload["attachments"] = []
 
     try:
-        if image_path:
+        if image_url:
             resp = requests.patch(
                 edit_url,
-                files=_make_files_payload(image_path, payload),
+                files=_make_files_payload(image_url, payload),
                 timeout=30,
             )
         else:
@@ -198,12 +239,12 @@ def dispatch_message(message) -> None:
 
     connections = Connection.objects.filter(enabled=True)
 
-    image_path = None
+    image_url = None
     if message.image:
         try:
-            image_path = message.image.path
+            image_url = message.image.url
         except Exception:
-            image_path = None
+            image_url = None
 
     any_success = False
     errors = []
@@ -216,7 +257,7 @@ def dispatch_message(message) -> None:
 
         if concrete.connection_type == "discord":
             success, remote_id, error_msg = send_to_discord(
-                concrete, message.headline, message.body, image_path
+                concrete, message.headline, message.body, image_url=image_url
             )
         else:
             error_msg = f"Unknown connection type: {concrete.connection_type}"
@@ -266,10 +307,10 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
     """
     from messaging.models import DeliveryReceipt
 
-    image_path = None
+    image_url = None
     if message.image:
         try:
-            image_path = message.image.path
+            image_url = message.image.url
         except Exception:
             pass
 
@@ -303,7 +344,7 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
             receipt.remote_message_id,
             message.headline,
             message.body,
-            image_path,
+            image_url=image_url,
         )
 
         if ok:
