@@ -249,4 +249,12 @@
 </script>
 {% endif %}
 
+{% if just_sent %}
+<script>
+setTimeout(function () {
+  window.location.href = '{% url "messaging:create" %}';
+}, 1500);
+</script>
+{% endif %}
+
 {% endblock %}

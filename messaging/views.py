@@ -41,7 +41,15 @@ def message_detail(request, pk):
     message = get_object_or_404(Message, pk=pk)
     receipts = message.receipts.select_related("connection").all()
     ctx = _base_context()
-    ctx.update({"message": message, "receipts": receipts, "mode": "view"})
+    just_sent = request.GET.get("just_sent") == "1"
+    ctx.update(
+        {
+            "message": message,
+            "receipts": receipts,
+            "mode": "view",
+            "just_sent": just_sent,
+        }
+    )
     return render(request, "messaging/message_view.html", ctx)
 
 
@@ -59,6 +67,13 @@ def message_create(request):
             action = request.POST.get("action", "save")
             if action == "send":
                 _do_send(request, msg)
+                if msg.sent:
+                    from django.urls import reverse
+
+                    return redirect(
+                        reverse("messaging:detail", kwargs={"pk": msg.pk})
+                        + "?just_sent=1"
+                    )
             else:
                 flash.success(request, "Draft saved.")
             return redirect("messaging:detail", pk=msg.pk)
@@ -132,6 +147,10 @@ def message_send(request, pk):
         return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
     _do_send(request, message)
+    if message.sent:
+        from django.urls import reverse
+
+        return redirect(f"{reverse('messaging:detail', kwargs={'pk': pk})}?just_sent=1")
     return redirect("messaging:detail", pk=pk)
 
 
