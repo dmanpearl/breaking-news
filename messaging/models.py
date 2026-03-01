@@ -40,23 +40,24 @@ class Message(models.Model):
         if self.body:
             # First non-empty line, truncated
             first_line = self.body.strip().splitlines()[0]
-            return first_line[:60] + ('...' if len(first_line) > 60 else '')
+            return first_line[:60] + ("..." if len(first_line) > 60 else "")
         if self.image:
             try:
                 import os
-                size = self.image.size          # bytes
-                name = self.image.name or ''
-                ext  = os.path.splitext(name)[1].upper().lstrip('.') or 'FILE'
+
+                size = self.image.size  # bytes
+                name = self.image.name or ""
+                ext = os.path.splitext(name)[1].upper().lstrip(".") or "FILE"
                 if size < 1024:
-                    size_str = f'{size} B'
+                    size_str = f"{size} B"
                 elif size < 1024 * 1024:
-                    size_str = f'{size / 1024:.1f} KB'
+                    size_str = f"{size / 1024:.1f} KB"
                 else:
-                    size_str = f'{size / (1024 * 1024):.1f} MB'
-                return f'{ext} Attachment ({size_str})'
+                    size_str = f"{size / (1024 * 1024):.1f} MB"
+                return f"{ext} Attachment ({size_str})"
             except Exception:
-                return 'Attachment'
-        return '(empty)'
+                return "Attachment"
+        return "(empty)"
 
     @property
     def can_edit(self) -> bool:

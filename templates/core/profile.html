@@ -1,5 +1,10 @@
 {% extends "messaging/layout.html" %}
 {% block page_title %}Profile{% endblock %}
+
+{% block sidebar_content %}
+  {% include "messaging/history_list.html" %}
+{% endblock %}
+
 {% block main_content %}
 <div class="message-card">
   <h2 style="font-family:var(--display);font-size:1.8rem;letter-spacing:.04em;margin-bottom:1rem;">{{ user.get_full_name }}</h2>
@@ -10,7 +15,8 @@
     <tr><th>Joined</th><td>{{ user.date_joined|date:"F j, Y" }}</td></tr>
     <tr><th>Role</th><td>{% if user.is_superuser %}Superuser{% else %}{{ user.groups.all|join:", "|default:"No group" }}{% endif %}</td></tr>
   </table>
-  <div style="margin-top:1.5rem;">
+  <div style="margin-top:1.5rem;display:flex;gap:0.75rem;align-items:center;">
+    <a href="{% url 'messaging:index' %}" class="btn">Back to Messages</a>
     <a href="{% url 'core:logout' %}" class="btn btn-danger">Log Out</a>
   </div>
 </div>

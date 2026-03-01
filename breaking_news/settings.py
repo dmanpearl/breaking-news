@@ -65,9 +65,8 @@ import dj_database_url  # type: ignore
 # DATABASE_PUBLIC_URL is the externally reachable URL (used by railway run locally).
 # DATABASE_URL is the private internal URL (used by the deployed app inside Railway).
 # Prefer PUBLIC when available so local railway run commands can connect.
-DATABASE_URL = (
-    config("DATABASE_PUBLIC_URL", default="")
-    or config("DATABASE_URL", default="")
+DATABASE_URL = config("DATABASE_PUBLIC_URL", default="") or config(
+    "DATABASE_URL", default=""
 )
 
 if DATABASE_URL:

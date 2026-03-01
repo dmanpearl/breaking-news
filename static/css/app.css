@@ -1,3 +1,4 @@
+/* cache-bust: v2 */
 /* ── Breaking News – App CSS ── */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap');
 
@@ -6,8 +7,10 @@
   --ink: #0d0d0d;
   --paper: #f5f0e8;
   --paper-dark: #e8e2d4;
-  --red: #c8102e;
-  --red-dark: #9e0b22;
+  --red: #b5303a;
+  --red-dark: #8a2028;
+  --action: #2a5fa5;
+  --action-dark: #1e4578;
   --gold: #c9a84c;
   --grey: #6b6560;
   --border: #ccc5b5;
@@ -30,7 +33,7 @@ html, body {
   line-height: 1.6;
 }
 
-a { color: var(--red); text-decoration: none; }
+a { color: var(--ink); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* ── Layout ── */
@@ -131,7 +134,7 @@ a:hover { text-decoration: underline; }
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.75rem;
-  background: var(--red);
+  background: var(--action);
   color: #fff;
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -142,7 +145,7 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius);
   transition: background 0.15s;
 }
-.btn-create:hover { background: var(--red-dark); color: #fff; text-decoration: none; }
+.btn-create:hover { background: var(--action-dark); color: #fff; text-decoration: none; }
 
 .history-list {
   flex: 1;
@@ -348,10 +351,12 @@ a:hover { text-decoration: underline; }
 .btn:hover { background: var(--paper-dark); }
 .btn-primary { background: var(--ink); color: #fff; border-color: var(--ink); }
 .btn-primary:hover { background: #333; }
+.btn-secondary { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.btn-secondary:hover { background: #b08838; text-decoration: none; }
 .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
 .btn-danger:hover { background: var(--red-dark); color: #fff; text-decoration: none; }
-.btn-send { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 600; }
-.btn-send:hover { background: #b8963c; }
+.btn-send { background: var(--action); color: #fff; border-color: var(--action); font-weight: 600; }
+.btn-send:hover { background: var(--action-dark); }
 
 /* ── Connection status panel ── */
 .conn-panel {

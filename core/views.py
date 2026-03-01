@@ -23,4 +23,14 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    return render(request, "core/profile.html")
+    from messaging.models import Message
+    from connections.models import Connection
+
+    return render(
+        request,
+        "core/profile.html",
+        {
+            "history": Message.objects.all(),
+            "connections": Connection.objects.all(),
+        },
+    )

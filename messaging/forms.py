@@ -7,13 +7,13 @@ class MessageForm(forms.ModelForm):
         model = Message
         fields = ["headline", "body", "image"]
         widgets = {
-            "headline": forms.TextInput(attrs={"placeholder": "Headline..."}),
+            "headline": forms.Textarea(attrs={"rows": 1, "placeholder": "Headline...", "style": "resize:none;overflow:hidden;"}),
             "body": forms.Textarea(attrs={"rows": 6, "placeholder": "Message body..."}),
         }
 
     def clean(self):
         cleaned = super().clean()
-        headline = cleaned.get("headline", "").strip()
+        headline = cleaned.get("headline", "").replace("\n", " ").strip()
         body = cleaned.get("body", "").strip()
         image = cleaned.get("image")
         # Keep existing image when editing (image field is empty on unchanged file)

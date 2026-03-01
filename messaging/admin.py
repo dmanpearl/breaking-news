@@ -28,10 +28,11 @@ mark_unsent.short_description = "Mark selected messages as unsent (draft)"
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     list_display = (
-        "headline",
+        "display_title_col",
+        "body_preview",
         "sent",
         "send_status_display",
-        "created_by",
+        "created_by_name",
         "created_at",
     )
     list_filter = ("sent",)
@@ -59,6 +60,23 @@ class MessageAdmin(admin.ModelAdmin):
         ),
     )
 
+    @admin.display(description="Title")
+    def display_title_col(self, obj):
+        return obj.display_title
+
+    @admin.display(description="Body")
+    def body_preview(self, obj):
+        if not obj.body:
+            return "—"
+        preview = obj.body.strip()[:80]
+        return preview + ("..." if len(obj.body.strip()) > 80 else "")
+
+    @admin.display(description="Created By")
+    def created_by_name(self, obj):
+        if not obj.created_by:
+            return "—"
+        return obj.created_by.get_full_name() or obj.created_by.username
+
     @admin.display(description="Image Preview")
     def image_preview(self, obj):
         if not obj.image:
@@ -78,7 +96,7 @@ class MessageAdmin(admin.ModelAdmin):
                 '<span style="color:#721c24;" title="{}">✗ Failed</span>',
                 obj.last_error[:200],
             )
-        return format_html('<span style="color:#856404;">— Draft</span>')
+        return format_html('<span style="color:#856404;">- Draft</span>')
 
     @admin.display(description="Last Send Error")
     def error_detail(self, obj):

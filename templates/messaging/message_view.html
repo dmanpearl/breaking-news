@@ -119,7 +119,6 @@
 <div class="form-card">
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
-
     <div class="form-group">
       <label for="{{ form.headline.id_for_label }}">Headline</label>
       {{ form.headline }}
@@ -148,13 +147,13 @@
 
     <div class="form-actions">
       {% if mode == "edit" %}
-        <button id="btn-send" type="submit" name="action" value="send" class="btn btn-send">
-          {% if message.sent %}Update{% else %}Save &amp; Send{% endif %}
+        <button type="submit" name="action" value="send" class="btn btn-send js-send-btn">
+          {% if message.sent %}Update{% else %}Send{% endif %}
         </button>
         <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
       {% else %}
-        <button type="submit" name="action" value="save" class="btn btn-primary">Save Draft</button>
-        <button id="btn-send" type="submit" name="action" value="send" class="btn btn-send">Save &amp; Send</button>
+        <button type="submit" name="action" value="send" class="btn btn-send js-send-btn">Send</button>
+        <button type="submit" name="action" value="save" class="btn btn-secondary">Save</button>
         <a href="{% url 'messaging:index' %}" class="btn">Cancel</a>
       {% endif %}
     </div>
@@ -163,29 +162,80 @@
 
 <script>
 (function () {
-  const headline = document.getElementById('{{ form.headline.id_for_label }}');
-  const body     = document.getElementById('{{ form.body.id_for_label }}');
-  const image    = document.getElementById('{{ form.image.id_for_label }}');
-  const sendBtn  = document.getElementById('btn-send');
+  var headline = document.getElementById('{{ form.headline.id_for_label }}');
+  var body     = document.getElementById('{{ form.body.id_for_label }}');
+  var image    = document.getElementById('{{ form.image.id_for_label }}');
+  var sendBtn  = document.querySelector('.js-send-btn');
   if (!sendBtn) return;
 
-  // Track whether there is already a saved image (edit mode)
-  const hasSavedImage = {{ message.image|yesno:'true,false' }};
+  var hasSavedImage = {{ message.image|yesno:'true,false' }};
 
-  function checkReady() {
-    const hasHeadline = headline && headline.value.trim().length > 0;
-    const hasBody     = body     && body.value.trim().length > 0;
-    const hasNewImage = image    && image.files && image.files.length > 0;
-    const ready = hasHeadline || hasBody || hasNewImage || hasSavedImage;
+  function isReady() {
+    var hasHeadline = headline && headline.value.replace(/\n/g, '').trim().length > 0;
+    var hasBody     = body     && body.value.trim().length > 0;
+    var hasNewImage = image    && image.files && image.files.length > 0;
+    return hasHeadline || hasBody || hasNewImage || hasSavedImage;
+  }
+
+  function updateSendBtn() {
+    var ready = isReady();
     sendBtn.disabled = !ready;
     sendBtn.style.opacity = ready ? '' : '0.4';
     sendBtn.style.cursor  = ready ? '' : 'not-allowed';
   }
 
-  if (headline) headline.addEventListener('input', checkReady);
-  if (body)     body.addEventListener('input', checkReady);
-  if (image)    image.addEventListener('change', checkReady);
-  checkReady();
+  function doSend() {
+    if (!isReady()) return;
+    var form = sendBtn.form;
+    // Set a hidden input so Django receives action=send
+    var hidden = document.createElement('input');
+    hidden.type  = 'hidden';
+    hidden.name  = 'action';
+    hidden.value = 'send';
+    form.appendChild(hidden);
+    form.submit();
+  }
+
+  if (headline) headline.addEventListener('input', updateSendBtn);
+  if (body)     body.addEventListener('input', updateSendBtn);
+  if (image)    image.addEventListener('change', updateSendBtn);
+
+  // Headline: block Enter from inserting newline; move focus to body instead
+  if (headline) {
+    headline.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        headline.value = headline.value.replace(/\n/g, '').trim();
+        if (body) body.focus();
+      }
+    });
+    // Also strip on input in case paste brings newlines
+    headline.addEventListener('input', function () {
+      var pos = headline.selectionStart;
+      headline.value = headline.value.replace(/\n/g, '');
+    });
+  }
+
+  // Body: Enter = send; Shift+Enter = newline
+  if (body) {
+    body.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if (e.shiftKey) {
+        e.preventDefault();
+        var start = body.selectionStart;
+        var end   = body.selectionEnd;
+        var nl    = String.fromCharCode(10);
+        body.value = body.value.slice(0, start) + nl + body.value.slice(end);
+        body.selectionStart = body.selectionEnd = start + 1;
+        updateSendBtn();
+        return;
+      }
+      e.preventDefault();
+      doSend();
+    });
+  }
+
+  updateSendBtn();
 })();
 </script>
 {% endif %}

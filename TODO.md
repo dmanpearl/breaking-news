@@ -7,10 +7,10 @@
 - [x] Send Button: Disable the Send button if any one of Headline, Message, or Attachment is not available.
 - [x] History: Previous message view only displays Headline, Message, or Attachment if present.
 - [x] History: When Message has only an Attachment (no Headline, no Message), Implement a custom message title for the History View built from file type and file size of the attachment.
+- [x] Keyboard Enter/Return Key Sends message: when focus is in message editing field, the Enter key sends the message.
 
 ## Open Items
 
-- [ ] Keyboard Enter/Return Key Sends message: when focus is in message editing field, the Enter key sends the message.
 - [ ] Headline: Remove:
   - [ ] Headline: Add a Site Settings flag called headline_enable (default: False).
   - [ ] Headline: Remove Headline from Editor if headline_enable=False.
