@@ -15,13 +15,14 @@
 - [x] Auto-focus cursor in new message body after pressing '+ New' to help quickly type new messages.
 - [x] Instant Send: After sending a message, immediately create a new message.
 - [x] Allow Empty Message Text: Messages can be sent with only attachments (images only, not text).
+- [x] Paste Image Support: While editing a message with an image in the clipboard, keyboard paste auto-attaches the image.
+- [x] Drag and drop image support to add an image to a message.
 
 ## Open Items
 
-- [ ] Paste Image Support: While editing a message with an image in the clipboard, keyboard paste auto-attaches the image.
-- [ ] Drag and drop image support to add an image to a message.
 - [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
-- [ ] PDF: Support PDF file format attachments.
+- [ ] PDF: Support PDF file format attachments (check if Mike wants this).
+- [ ] Delete message capability.
 - [ ] Multi-Image Support: Allow attachment of multiple images to a message.
 - [ ] Metrics: Get any metrics from Discord about message views and other stats that may be available.
 - [ ] New Connection Type: Add another service we can post to in addition to Discord.

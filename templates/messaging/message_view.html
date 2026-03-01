@@ -139,12 +139,13 @@
 
     <div class="form-group">
       <label for="{{ form.image.id_for_label }}">Image Attachment</label>
-      {% if message.image %}
-        <div style="margin-bottom:0.5rem;">
-          <img src="{{ message.image.url }}" style="max-height:120px;border:1px solid var(--border);" />
-        </div>
-      {% endif %}
-      {{ form.image }}
+      <div id="drop-zone" class="drop-zone">
+        <div id="drop-hint" class="drop-hint">Drop image here or paste from clipboard</div>
+        <img id="img-preview" class="img-preview"
+          {% if message.image %}src="{{ message.image.url }}"{% endif %}
+          style="{% if not message.image %}display:none;{% endif %}" alt="Preview" />
+        {{ form.image }}
+      </div>
     </div>
 
     <div class="form-actions">
@@ -244,6 +245,68 @@
     headline.focus();
   } else if (body) {
     body.focus();
+  }
+
+  // ── Paste & Drag-and-Drop image support ─────────────────────────────────
+  var dropZone = document.getElementById('drop-zone');
+  var dropHint = document.getElementById('drop-hint');
+  var imgPreview = document.getElementById('img-preview');
+
+  function attachImageFile(file) {
+    if (!file || !file.type.match(/^image\//)) return;
+    // Assign to the file input via DataTransfer
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    image.files = dt.files;
+    // Show inline preview
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      imgPreview.src = e.target.result;
+      imgPreview.style.display = 'block';
+      if (dropHint) dropHint.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    updateSendBtn();
+  }
+
+  // Paste anywhere on the form
+  var form = image && image.closest('form');
+  if (form) {
+    form.addEventListener('paste', function (e) {
+      var items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.match(/^image\//)) {
+          e.preventDefault();
+          attachImageFile(items[i].getAsFile());
+          return;
+        }
+      }
+    });
+  }
+
+  // Drag-and-drop onto the drop zone
+  if (dropZone) {
+    dropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', function (e) {
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drag-over');
+      }
+    });
+    dropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      var file = e.dataTransfer.files && e.dataTransfer.files[0];
+      attachImageFile(file);
+    });
+  }
+
+  // Hide drop hint if there is already a saved image
+  if (imgPreview && imgPreview.src && imgPreview.src !== window.location.href) {
+    if (dropHint) dropHint.style.display = 'none';
   }
 })();
 </script>

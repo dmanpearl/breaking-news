@@ -351,6 +351,35 @@ a:hover { text-decoration: underline; }
 .btn:hover { background: var(--paper-dark); }
 .btn-primary { background: var(--ink); color: #fff; border-color: var(--ink); }
 .btn-primary:hover { background: #333; }
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.drop-zone.drag-over {
+  border-color: var(--action);
+  background: rgba(42, 95, 165, 0.06);
+}
+.drop-hint {
+  font-size: 0.78rem;
+  color: var(--grey);
+  text-align: center;
+  padding: 0.5rem 0;
+  pointer-events: none;
+}
+.img-preview {
+  display: block;
+  max-height: 160px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  object-fit: contain;
+}
+
 .btn-secondary { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 .btn-secondary:hover { background: #b08838; text-decoration: none; }
 .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
