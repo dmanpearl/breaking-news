@@ -2,7 +2,7 @@
   {% for msg in history %}
   <a href="{% url 'messaging:detail' msg.pk %}"
      class="history-item {% if active_id == msg.pk %}active{% endif %}">
-    <div class="history-headline">{{ msg.headline }}</div>
+    <div class="history-headline">{{ msg.display_title }}</div>
     <div class="history-meta">
       {{ msg.created_at|date:"M j, Y g:i a" }}
       {% if msg.sent %}

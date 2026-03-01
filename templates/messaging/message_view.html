@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}
-  {% if mode == "create" %}New Message{% elif mode == "edit" %}Edit: {{ message.headline }}{% else %}{{ message.headline }}{% endif %} – Breaking News
+  {% if mode == "create" %}New Message{% elif mode == "edit" %}Edit: {{ message.display_title }}{% else %}{{ message.display_title }}{% endif %} - Breaking News
 {% endblock %}
 
 {% block sidebar_content %}
@@ -14,7 +14,7 @@
   <h1>
     {% if mode == "create" %}New Message
     {% elif mode == "edit" %}Edit Message
-    {% else %}{{ message.headline }}
+    {% else %}{{ message.display_title }}
     {% endif %}
   </h1>
 
@@ -44,13 +44,17 @@
 {% if mode == "view" and message %}
 <!-- ── VIEW MODE ── -->
 <div class="message-card">
+  {% if message.headline %}
   <div class="message-headline">{{ message.headline }}</div>
+  {% endif %}
 
   {% if message.image %}
   <img class="message-image" src="{{ message.image.url }}" alt="Attachment" />
   {% endif %}
 
+  {% if message.body %}
   <div class="message-body">{{ message.body }}</div>
+  {% endif %}
 
   <!-- Send error banner -->
   {% if message.last_error and not message.sent %}
@@ -144,18 +148,46 @@
 
     <div class="form-actions">
       {% if mode == "edit" %}
-        <button type="submit" name="action" value="send" class="btn btn-send">
+        <button id="btn-send" type="submit" name="action" value="send" class="btn btn-send">
           {% if message.sent %}Update{% else %}Save &amp; Send{% endif %}
         </button>
         <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
       {% else %}
         <button type="submit" name="action" value="save" class="btn btn-primary">Save Draft</button>
-        <button type="submit" name="action" value="send" class="btn btn-send">Save &amp; Send</button>
+        <button id="btn-send" type="submit" name="action" value="send" class="btn btn-send">Save &amp; Send</button>
         <a href="{% url 'messaging:index' %}" class="btn">Cancel</a>
       {% endif %}
     </div>
   </form>
 </div>
+
+<script>
+(function () {
+  const headline = document.getElementById('{{ form.headline.id_for_label }}');
+  const body     = document.getElementById('{{ form.body.id_for_label }}');
+  const image    = document.getElementById('{{ form.image.id_for_label }}');
+  const sendBtn  = document.getElementById('btn-send');
+  if (!sendBtn) return;
+
+  // Track whether there is already a saved image (edit mode)
+  const hasSavedImage = {{ message.image|yesno:'true,false' }};
+
+  function checkReady() {
+    const hasHeadline = headline && headline.value.trim().length > 0;
+    const hasBody     = body     && body.value.trim().length > 0;
+    const hasNewImage = image    && image.files && image.files.length > 0;
+    const ready = hasHeadline || hasBody || hasNewImage || hasSavedImage;
+    sendBtn.disabled = !ready;
+    sendBtn.style.opacity = ready ? '' : '0.4';
+    sendBtn.style.cursor  = ready ? '' : 'not-allowed';
+  }
+
+  if (headline) headline.addEventListener('input', checkReady);
+  if (body)     body.addEventListener('input', checkReady);
+  if (image)    image.addEventListener('change', checkReady);
+  checkReady();
+})();
+</script>
 {% endif %}
 
 {% endblock %}

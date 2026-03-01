@@ -5,8 +5,8 @@ from connections.models import Connection
 
 
 class Message(models.Model):
-    headline = models.CharField(max_length=255)
-    body = models.TextField()
+    headline = models.CharField(max_length=255, blank=True)
+    body = models.TextField(blank=True)
     image = models.ImageField(upload_to="message_images/", blank=True, null=True)
     sent = models.BooleanField(default=False)
     last_error = models.TextField(
@@ -27,6 +27,36 @@ class Message(models.Model):
 
     def __str__(self):
         return self.headline
+
+    @property
+    def display_title(self) -> str:
+        """
+        Title for the history sidebar.
+        Falls back to a description built from the attachment when there is
+        no headline and no body.
+        """
+        if self.headline:
+            return self.headline
+        if self.body:
+            # First non-empty line, truncated
+            first_line = self.body.strip().splitlines()[0]
+            return first_line[:60] + ('...' if len(first_line) > 60 else '')
+        if self.image:
+            try:
+                import os
+                size = self.image.size          # bytes
+                name = self.image.name or ''
+                ext  = os.path.splitext(name)[1].upper().lstrip('.') or 'FILE'
+                if size < 1024:
+                    size_str = f'{size} B'
+                elif size < 1024 * 1024:
+                    size_str = f'{size / 1024:.1f} KB'
+                else:
+                    size_str = f'{size / (1024 * 1024):.1f} MB'
+                return f'{ext} Attachment ({size_str})'
+            except Exception:
+                return 'Attachment'
+        return '(empty)'
 
     @property
     def can_edit(self) -> bool:
