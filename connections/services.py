@@ -30,46 +30,26 @@ logger = logging.getLogger(__name__)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def _attachment_filename(image_url: str) -> str:
-    """Return a normalised attachment filename that preserves the real extension.
-
-    Discord uses the filename in the attachment:// URL reference inside embeds,
-    so the name sent as the file and the name in the embed URL must match exactly.
-    A GIF uploaded as 'upload.png' will not render — the extension must be correct.
-    """
-    import os
-    from urllib.parse import urlparse
-    path = urlparse(image_url).path
-    ext = os.path.splitext(path)[1].lower() or ".png"
-    return f"upload{ext}"  # e.g. upload.gif, upload.jpg, upload.png
-
-
-def _is_gif(image_url: str) -> bool:
-    """Return True if the image URL points to a GIF."""
-    from urllib.parse import urlparse
-    import os
-    ext = os.path.splitext(urlparse(image_url).path)[1].lower()
-    return ext == ".gif"
+# MIME → extension map. Cloudinary strips extensions from public IDs, so the
+# URL path has no extension (e.g. .../git_merge_feels_like_cfn3n1). We derive
+# the extension — and whether the file is a GIF — from the HTTP Content-Type
+# header, which Cloudinary always supplies correctly.
+_MIME_TO_EXT = {
+    "image/gif":  ".gif",
+    "image/jpeg": ".jpg",
+    "image/jpg":  ".jpg",
+    "image/png":  ".png",
+    "image/webp": ".webp",
+}
 
 
-def _build_embed(headline: str, body: str, attachment_name: str | None = None,
-                 is_gif: bool = False) -> dict:
-    embed = {"title": headline, "description": body, "color": 0xE63946}
-    # GIFs must NOT be referenced inside the embed image field — Discord strips
-    # animation when an attachment is embedded that way and shows only the first
-    # frame. Sending the file alongside the embed (without the image reference)
-    # causes Discord to display the animated GIF below the embed automatically.
-    if attachment_name and not is_gif:
-        embed["image"] = {"url": f"attachment://{attachment_name}"}
-    return embed
+def _fetch_image(image_url: str) -> tuple[bytes, str]:
+    """Return (file_bytes, mime_type) for an image URL.
 
-
-def _make_files_payload(image_url: str, payload: dict) -> dict:
-    """Return a requests multipart files dict with the image bytes.
-
-    If the URL is absolute (Cloudinary on Railway), fetch it over HTTP.
-    If the URL is relative (/media/... on local runserver), read the file
-    directly from MEDIA_ROOT — avoids the server having to fetch from itself.
+    Absolute URL  → fetch from CDN (Cloudinary on Railway).
+    Relative URL  → read from local MEDIA_ROOT (runserver).
+    The mime type is always derived from the actual content, never the URL,
+    because Cloudinary strips file extensions from public IDs.
     """
     import mimetypes
     import os
@@ -78,14 +58,11 @@ def _make_files_payload(image_url: str, payload: dict) -> dict:
 
     parsed = urlparse(image_url)
     if parsed.scheme:
-        # Absolute URL — fetch from CDN (Cloudinary on Railway)
         resp = requests.get(image_url, timeout=30)
         resp.raise_for_status()
-        file_bytes = resp.content
         mime = resp.headers.get("Content-Type", "image/png").split(";")[0].strip()
+        return resp.content, mime
     else:
-        # Relative URL — read directly from local MEDIA_ROOT
-        # Strip the MEDIA_URL prefix to get just the relative file path
         rel = parsed.path
         media_url_prefix = settings.MEDIA_URL.rstrip("/")
         if rel.startswith(media_url_prefix):
@@ -94,9 +71,29 @@ def _make_files_payload(image_url: str, payload: dict) -> dict:
         with open(local_path, "rb") as fh:
             file_bytes = fh.read()
         mime, _ = mimetypes.guess_type(local_path)
-        mime = mime or "image/png"
+        return file_bytes, mime or "image/png"
 
-    filename = _attachment_filename(image_url)
+
+def _build_embed(headline: str, body: str, attachment_name: str | None = None,
+                 is_gif: bool = False) -> dict:
+    embed = {"title": headline, "description": body, "color": 0xE63946}
+    # GIFs must NOT be referenced inside the embed image field — Discord strips
+    # animation when an attachment is referenced that way, showing only the first
+    # frame. Sending the file alongside the embed (without the image reference)
+    # causes Discord to display the animated GIF below the embed automatically.
+    if attachment_name and not is_gif:
+        embed["image"] = {"url": f"attachment://{attachment_name}"}
+    return embed
+
+
+def _make_files_payload(file_bytes: bytes, mime: str, payload: dict) -> dict:
+    """Return a requests multipart files dict from pre-fetched image bytes.
+
+    Accepts bytes + mime directly so callers that already fetched the image
+    (to determine mime/gif status) don't fetch it a second time.
+    """
+    ext = _MIME_TO_EXT.get(mime, ".png")
+    filename = f"upload{ext}"
     return {
         "files[0]": (filename, file_bytes, mime),
         "payload_json": (None, json.dumps(payload), "application/json"),
@@ -134,8 +131,15 @@ def send_to_discord(
 
     Returns (success, discord_message_id, error_message).
     """
-    attachment_name = _attachment_filename(image_url) if image_url else None
-    gif = _is_gif(image_url) if image_url else False
+    if image_url:
+        _img_bytes, _mime = _fetch_image(image_url)
+        _ext = _MIME_TO_EXT.get(_mime, ".png")
+        attachment_name = f"upload{_ext}"
+        gif = (_mime == "image/gif")
+    else:
+        _img_bytes, _mime = None, None
+        attachment_name = None
+        gif = False
     embed = _build_embed(headline, body, attachment_name=attachment_name, is_gif=gif)
     payload = {"embeds": [embed]}
     url = _webhook_base_url(connection.webhook_url) + "?wait=true"
@@ -143,7 +147,7 @@ def send_to_discord(
     try:
         if image_url:
             resp = requests.post(
-                url, files=_make_files_payload(image_url, payload), timeout=30
+                url, files=_make_files_payload(_img_bytes, _mime, payload), timeout=30
             )
         else:
             resp = requests.post(url, json=payload, timeout=10)
@@ -199,8 +203,15 @@ def edit_discord_webhook_message(
     edit_url = (
         f"{_webhook_base_url(connection.webhook_url)}/messages/{discord_message_id}"
     )
-    attachment_name = _attachment_filename(image_url) if image_url else None
-    gif = _is_gif(image_url) if image_url else False
+    if image_url:
+        _img_bytes, _mime = _fetch_image(image_url)
+        _ext = _MIME_TO_EXT.get(_mime, ".png")
+        attachment_name = f"upload{_ext}"
+        gif = (_mime == "image/gif")
+    else:
+        _img_bytes, _mime = None, None
+        attachment_name = None
+        gif = False
     embed = _build_embed(headline, body, attachment_name=attachment_name, is_gif=gif)
     payload = {"embeds": [embed]}
 
@@ -213,7 +224,7 @@ def edit_discord_webhook_message(
         if image_url:
             resp = requests.patch(
                 edit_url,
-                files=_make_files_payload(image_url, payload),
+                files=_make_files_payload(_img_bytes, _mime, payload),
                 timeout=30,
             )
         else:
