@@ -119,6 +119,7 @@
 <div class="form-card">
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
+    {% if headline_enabled %}
     <div class="form-group">
       <label for="{{ form.headline.id_for_label }}">Headline</label>
       {{ form.headline }}
@@ -126,6 +127,7 @@
         <div style="color:var(--red);font-size:0.8rem;margin-top:0.25rem;">{{ form.headline.errors }}</div>
       {% endif %}
     </div>
+    {% endif %}
 
     <div class="form-group">
       <label for="{{ form.body.id_for_label }}">Body</label>

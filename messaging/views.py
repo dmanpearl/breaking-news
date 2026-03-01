@@ -14,6 +14,7 @@ from connections.services import (
     update_sent_messages,
 )
 
+from core.models import SiteSettings
 from .forms import MessageForm
 from .models import Message
 
@@ -22,9 +23,11 @@ logger = logging.getLogger(__name__)
 
 def _base_context():
     """Common context injected into every messaging view."""
+    settings = SiteSettings.get()
     return {
         "history": Message.objects.all(),
         "connections": Connection.objects.all(),
+        "headline_enabled": settings.headline_enable,
     }
 
 
@@ -44,8 +47,11 @@ def message_detail(request, pk):
 
 @login_required
 def message_create(request):
+    headline_enabled = SiteSettings.get().headline_enable
     if request.method == "POST":
-        form = MessageForm(request.POST, request.FILES)
+        form = MessageForm(
+            request.POST, request.FILES, headline_enabled=headline_enabled
+        )
         if form.is_valid():
             msg = form.save(commit=False)
             msg.created_by = request.user
@@ -57,7 +63,7 @@ def message_create(request):
                 flash.success(request, "Draft saved.")
             return redirect("messaging:detail", pk=msg.pk)
     else:
-        form = MessageForm()
+        form = MessageForm(headline_enabled=headline_enabled)
     ctx = _base_context()
     ctx.update({"form": form, "mode": "create"})
     return render(request, "messaging/message_view.html", ctx)
@@ -73,8 +79,14 @@ def message_edit(request, pk):
             "Enable Can edit sent on the connection in the admin panel.",
         )
         return redirect("messaging:detail", pk=pk)
+    headline_enabled = SiteSettings.get().headline_enable
     if request.method == "POST":
-        form = MessageForm(request.POST, request.FILES, instance=message)
+        form = MessageForm(
+            request.POST,
+            request.FILES,
+            instance=message,
+            headline_enabled=headline_enabled,
+        )
         if form.is_valid():
             msg = form.save()
             if msg.sent:
@@ -86,7 +98,27 @@ def message_edit(request, pk):
                 _do_send(request, msg)
             return redirect("messaging:detail", pk=msg.pk)
     else:
-        form = MessageForm(instance=message)
+        # If headline is disabled and this message has one, migrate it into body.
+        if not SiteSettings.get().headline_enable and message.headline:
+            merged_body = (
+                (message.headline + "\n\n" + message.body)
+                if message.body
+                else message.headline
+            )
+            migrated = message.__class__(
+                pk=message.pk,
+                headline="",
+                body=merged_body,
+                image=message.image,
+                sent=message.sent,
+                last_error=message.last_error,
+                created_by=message.created_by,
+                created_at=message.created_at,
+                updated_at=message.updated_at,
+            )
+            form = MessageForm(instance=migrated, headline_enabled=False)
+        else:
+            form = MessageForm(instance=message, headline_enabled=headline_enabled)
     receipts = message.receipts.select_related("connection").all()
     ctx = _base_context()
     ctx.update({"form": form, "message": message, "receipts": receipts, "mode": "edit"})

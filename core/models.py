@@ -19,6 +19,10 @@ class User(AbstractUser):
 
 
 class SiteSettings(models.Model):
+    headline_enable = models.BooleanField(
+        default=False,
+        help_text="Show the Headline field in the message editor.",
+    )
     inactivity_timeout_mins = models.PositiveIntegerField(
         default=15, help_text="Minutes of inactivity before auto-logout."
     )

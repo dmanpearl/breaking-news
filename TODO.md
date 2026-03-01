@@ -14,7 +14,7 @@
 - [ ] Headline: Remove:
   - [ ] Headline: Add a Site Settings flag called headline_enable (default: False).
   - [ ] Headline: Remove Headline from Editor if headline_enable=False.
-  - [ ] Headline: When headline_enable=False and a user edits a message with a Headline, prepend the Headline to the Message sesparated by linefeeds.
+  - [ ] Headline: When headline_enable=False and a user edits a message with a Headline, prepend the Headline to the body separated by linefeeds.
 - [ ] Instant Send: Idle mode is Create Message state, allowing immediate type and send.
 - [ ] Allow Empty Message Text: Messages can be sent with only attachments (images only, not text).
 - [ ] Paste Image Support: While editing a message with an image in the clipboard, keyboard paste auto-attaches the image.

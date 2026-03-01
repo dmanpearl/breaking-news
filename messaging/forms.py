@@ -7,9 +7,20 @@ class MessageForm(forms.ModelForm):
         model = Message
         fields = ["headline", "body", "image"]
         widgets = {
-            "headline": forms.Textarea(attrs={"rows": 1, "placeholder": "Headline...", "style": "resize:none;overflow:hidden;"}),
+            "headline": forms.Textarea(
+                attrs={
+                    "rows": 1,
+                    "placeholder": "Headline...",
+                    "style": "resize:none;overflow:hidden;",
+                }
+            ),
             "body": forms.Textarea(attrs={"rows": 6, "placeholder": "Message body..."}),
         }
+
+    def __init__(self, *args, headline_enabled=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not headline_enabled:
+            self.fields.pop("headline", None)
 
     def clean(self):
         cleaned = super().clean()
