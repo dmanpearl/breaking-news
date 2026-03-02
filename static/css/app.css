@@ -379,6 +379,19 @@ a:hover { text-decoration: underline; }
   margin-bottom: 0.5rem;
   object-fit: contain;
 }
+.pdf-preview-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.5rem;
+  word-break: break-all;
+}
 
 .btn-secondary { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 .btn-secondary:hover { background: #b08838; text-decoration: none; }

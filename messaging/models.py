@@ -7,7 +7,12 @@ from connections.models import Connection
 class Message(models.Model):
     headline = models.CharField(max_length=255, blank=True)
     body = models.TextField(blank=True)
-    image = models.ImageField(upload_to="message_images/", blank=True, null=True)
+    image = models.FileField(
+        upload_to="message_images/",
+        blank=True,
+        null=True,
+        help_text="Accepted: images (PNG, JPG, GIF, WEBP) and PDF files.",
+    )
     sent = models.BooleanField(default=False)
     last_error = models.TextField(
         blank=True,

@@ -32,15 +32,22 @@ logger = logging.getLogger(__name__)
 
 # MIME → extension map. Cloudinary strips extensions from public IDs, so the
 # URL path has no extension (e.g. .../git_merge_feels_like_cfn3n1). We derive
-# the extension — and whether the file is a GIF — from the HTTP Content-Type
-# header, which Cloudinary always supplies correctly.
+# the extension from the HTTP Content-Type header, which Cloudinary always
+# supplies correctly. Works for images and PDFs.
 _MIME_TO_EXT = {
-    "image/gif":  ".gif",
-    "image/jpeg": ".jpg",
-    "image/jpg":  ".jpg",
-    "image/png":  ".png",
-    "image/webp": ".webp",
+    "image/gif":       ".gif",
+    "image/jpeg":      ".jpg",
+    "image/jpg":       ".jpg",
+    "image/png":       ".png",
+    "image/webp":      ".webp",
+    "application/pdf": ".pdf",
 }
+
+# MIME types sent as bare file attachments (not referenced in embed image field).
+# GIF: Discord strips animation when embed-referenced, showing only first frame.
+# PDF: Discord cannot render PDFs as embed images at all.
+# Both appear as native Discord attachment cards below the embed.
+_BARE_ATTACHMENT_MIMES = {"image/gif", "application/pdf"}
 
 
 def _fetch_image(image_url: str) -> tuple[bytes, str]:
@@ -77,10 +84,11 @@ def _fetch_image(image_url: str) -> tuple[bytes, str]:
 def _build_embed(headline: str, body: str, attachment_name: str | None = None,
                  is_gif: bool = False) -> dict:
     embed = {"title": headline, "description": body, "color": 0xE63946}
-    # GIFs must NOT be referenced inside the embed image field — Discord strips
-    # animation when an attachment is referenced that way, showing only the first
-    # frame. Sending the file alongside the embed (without the image reference)
-    # causes Discord to display the animated GIF below the embed automatically.
+    # GIFs and PDFs must NOT be referenced inside the embed image field.
+    # GIF: Discord strips animation, showing only the first frame.
+    # PDF: Discord cannot render PDFs as embed images at all.
+    # Both are sent as bare file attachments; Discord handles them natively
+    # (GIF animates; PDF appears as a download card below the embed).
     if attachment_name and not is_gif:
         embed["image"] = {"url": f"attachment://{attachment_name}"}
     return embed
@@ -135,7 +143,7 @@ def send_to_discord(
         _img_bytes, _mime = _fetch_image(image_url)
         _ext = _MIME_TO_EXT.get(_mime, ".png")
         attachment_name = f"upload{_ext}"
-        gif = (_mime == "image/gif")
+        gif = (_mime in _BARE_ATTACHMENT_MIMES)
     else:
         _img_bytes, _mime = None, None
         attachment_name = None
@@ -207,7 +215,7 @@ def edit_discord_webhook_message(
         _img_bytes, _mime = _fetch_image(image_url)
         _ext = _MIME_TO_EXT.get(_mime, ".png")
         attachment_name = f"upload{_ext}"
-        gif = (_mime == "image/gif")
+        gif = (_mime in _BARE_ATTACHMENT_MIMES)
     else:
         _img_bytes, _mime = None, None
         attachment_name = None

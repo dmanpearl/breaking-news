@@ -113,7 +113,20 @@ MEDIA_ROOT = BASE_DIR / "media"
 CLOUDINARY_URL = config("CLOUDINARY_URL", default="")
 if CLOUDINARY_URL:
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    CLOUDINARY_STORAGE = {"CLOUDINARY_URL": CLOUDINARY_URL}
+    CLOUDINARY_STORAGE = {
+        "CLOUDINARY_URL": CLOUDINARY_URL,
+        # "raw" allows Cloudinary to store non-image files (e.g. PDFs) without
+        # attempting image processing on them. Without this, PDF uploads are
+        # rejected by Cloudinary with an "Invalid image file" error.
+        "MEDIA_TAG": "media",
+        "INVALID_VIDEO_ERROR_MESSAGE": "Please upload a valid file.",
+        "EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS": (),
+        "STATIC_TAG": "static",
+        "STATICFILES_MANIFEST_ROOT": BASE_DIR / "manifest",
+        "MAGIC_FILE_PATH": "magic",
+        "PREFIX": "",
+        "ALLOWED_RESOURCE_TYPES": ["image", "raw"],
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

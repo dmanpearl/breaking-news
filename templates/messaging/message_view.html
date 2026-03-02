@@ -49,7 +49,18 @@
   {% endif %}
 
   {% if message.image %}
+  {% with message.image.name|lower as fname %}
+  {% if fname|slice:"-4:" == ".pdf" %}
+  <div class="message-pdf-attach">
+    <a href="{{ message.image.url }}" target="_blank" rel="noopener" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:0.4rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      View PDF
+    </a>
+  </div>
+  {% else %}
   <img class="message-image" src="{{ message.image.url }}" alt="Attachment" />
+  {% endif %}
+  {% endwith %}
   {% endif %}
 
   {% if message.body %}
@@ -138,12 +149,20 @@
     </div>
 
     <div class="form-group">
-      <label for="{{ form.image.id_for_label }}">Image Attachment</label>
+      <label for="{{ form.image.id_for_label }}">Attachment <span style="font-weight:400;color:var(--grey);font-size:0.8em;">(image or PDF)</span></label>
       <div id="drop-zone" class="drop-zone">
-        <div id="drop-hint" class="drop-hint">Drop image here or paste from clipboard</div>
+        <div id="drop-hint" class="drop-hint">Drop image or PDF here, or paste image from clipboard</div>
         <img id="img-preview" class="img-preview"
-          {% if message.image %}src="{{ message.image.url }}"{% endif %}
-          style="{% if not message.image %}display:none;{% endif %}" alt="Preview" />
+          {% if message.image and not message.image.name|lower|slice:"-4:"|stringformat:"s" == ".pdf" %}src="{{ message.image.url }}"{% endif %}
+          style="{% if not message.image or message.image.name|lower|slice:"-4:" == ".pdf" %}display:none;{% endif %}" alt="Preview" />
+        {% if message.image and message.image.name|lower|slice:"-4:" == ".pdf" %}
+        <div id="pdf-preview" class="pdf-preview-name">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {{ message.image.name|slice:"16:" }}
+        </div>
+        {% else %}
+        <div id="pdf-preview" class="pdf-preview-name" style="display:none;"></div>
+        {% endif %}
         {{ form.image }}
       </div>
     </div>
@@ -252,20 +271,39 @@
   var dropHint = document.getElementById('drop-hint');
   var imgPreview = document.getElementById('img-preview');
 
+  var pdfPreview = document.getElementById('pdf-preview');
+
+  function isAllowedFile(file) {
+    return file && (file.type.match(/^image\//) || file.type === 'application/pdf');
+  }
+
   function attachImageFile(file) {
-    if (!file || !file.type.match(/^image\//)) return;
+    if (!isAllowedFile(file)) return;
     // Assign to the file input via DataTransfer
     var dt = new DataTransfer();
     dt.items.add(file);
     image.files = dt.files;
-    // Show inline preview
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      imgPreview.src = e.target.result;
-      imgPreview.style.display = 'block';
+
+    if (file.type === 'application/pdf') {
+      // PDF: show filename, hide image preview
+      imgPreview.style.display = 'none';
+      imgPreview.src = '';
+      if (pdfPreview) {
+        pdfPreview.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> ' + file.name;
+        pdfPreview.style.display = 'flex';
+      }
       if (dropHint) dropHint.style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    } else {
+      // Image: show inline preview
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        imgPreview.src = e.target.result;
+        imgPreview.style.display = 'block';
+        if (pdfPreview) pdfPreview.style.display = 'none';
+        if (dropHint) dropHint.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
     updateSendBtn();
   }
 
@@ -276,7 +314,7 @@
       var items = e.clipboardData && e.clipboardData.items;
       if (!items) return;
       for (var i = 0; i < items.length; i++) {
-        if (items[i].type.match(/^image\//)) {
+        if (items[i].type.match(/^image\//) || items[i].type === 'application/pdf') {
           e.preventDefault();
           attachImageFile(items[i].getAsFile());
           return;
