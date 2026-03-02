@@ -65,6 +65,27 @@ class Message(models.Model):
         return "(empty)"
 
     @property
+    def display_sender_full(self) -> str:
+        """Full name if available, otherwise username. For the detail view."""
+        u = self.created_by
+        if not u:
+            return "Unknown"
+        full = f"{u.first_name} {u.last_name}".strip()
+        return full if full else u.username
+
+    @property
+    def display_sender_short(self) -> str:
+        """'First L.' if available, 'First' if no last name, else username. For history list."""
+        u = self.created_by
+        if not u:
+            return ""
+        if u.first_name and u.last_name:
+            return f"{u.first_name} {u.last_name[0]}"
+        if u.first_name:
+            return u.first_name
+        return u.username
+
+    @property
     def can_edit(self) -> bool:
         """
         A message is editable when:

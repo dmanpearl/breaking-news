@@ -20,12 +20,14 @@
 - [x] Fix Image Display Bug: Images cease to display in the app after sending, need to implement Cloudinary SAAS service.
 - [x] Add eyeball button in password fields to view plaintext passwords (Login & Admin User Create)
 - [x] PDF: Support PDF file format attachments
+- [x] Display sender's name with message info
 
 ## Open Items
 
+- [ ] Delete message capability.
+- [ ] PDF bug: File downloads as 'upload.pdf', but should have the original filename.
 - [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
 - [ ] Video: Support video file format attachments
-- [ ] Delete message capability.
 - [ ] Multi-Image Support: Allow attachment of multiple images to a message.
 - [ ] Metrics: Get any metrics from Discord about message views and other stats that may be available.
 - [ ] New Connection Type: Add another service we can post to in addition to Discord.

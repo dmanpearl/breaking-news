@@ -12,6 +12,9 @@
       {% else %}
         <span class="history-badge">Draft</span>
       {% endif %}
+      {% if message.display_sender_short %}
+      · {{ message.display_sender_short }}
+      {% endif %}
     </div>
   </a>
   {% empty %}

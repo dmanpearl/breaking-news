@@ -75,6 +75,13 @@
   </div>
   {% endif %}
 
+  <!-- Sender -->
+  {% if message.created_by %}
+  <div style="font-size:0.8rem; color:var(--grey); margin-bottom:0.5rem;">
+    Sent by <strong>{{ message.display_sender_full }}</strong>
+  </div>
+  {% endif %}
+
   <!-- Delivery Metrics -->
   {% with summary=message.delivery_summary %}
   {% if summary.total > 0 %}
