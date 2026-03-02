@@ -50,50 +50,40 @@ _MIME_TO_EXT = {
 _BARE_ATTACHMENT_MIMES = {"image/gif", "application/pdf"}
 
 
-def _fetch_image(image_url: str) -> tuple[bytes, str]:
-    """Return (file_bytes, mime_type) for an image URL.
+def _fetch_attachment(field) -> tuple[bytes, str]:
+    """Return (file_bytes, mime_type) for a Django FieldFile.
 
-    Absolute URL  → fetch from CDN (Cloudinary on Railway).
-    Relative URL  → read from local MEDIA_ROOT (runserver).
+    Reads the file through Django's storage backend, which means:
+      - Local (runserver): reads directly from MEDIA_ROOT — no HTTP.
+      - Railway (Cloudinary): uses the Cloudinary SDK with API credentials
+        via storage._open(), avoiding unauthenticated HTTP fetches that can
+        return 401 on raw/private resources.
 
-    MIME detection strategy (in priority order):
-      1. HTTP Content-Type header  — accurate for images (Cloudinary sniffs them).
-      2. URL path extension        — Cloudinary raw resources (PDFs) return
-                                     application/octet-stream as a generic header,
-                                     so we fall back to guessing from the URL path.
-      3. Hard-coded default        — image/png if all else fails.
+    MIME is derived from the stored filename (reliable for both environments
+    because the original filename with extension is always preserved in the
+    field's name attribute and in the Cloudinary public_id for raw resources).
     """
     import mimetypes
-    import os
-    from urllib.parse import urlparse
-    from django.conf import settings
-
-    # Vague MIME types that Cloudinary returns for raw resources.
-    # Treat these as "unknown" and fall back to URL-path guessing.
-    _VAGUE_MIMES = {"application/octet-stream", "binary/octet-stream", ""}
-
-    parsed = urlparse(image_url)
-    if parsed.scheme:
-        resp = requests.get(image_url, timeout=30)
-        resp.raise_for_status()
-        mime = resp.headers.get("Content-Type", "").split(";")[0].strip()
-        if not mime or mime in _VAGUE_MIMES:
-            # Cloudinary raw resources return octet-stream — guess from URL path.
-            # For raw resources Cloudinary preserves the original filename in the
-            # URL (e.g. .../message_images/report.pdf), so this works reliably.
-            guessed, _ = mimetypes.guess_type(parsed.path)
-            mime = guessed or "image/png"
-        return resp.content, mime
-    else:
-        rel = parsed.path
-        media_url_prefix = settings.MEDIA_URL.rstrip("/")
-        if rel.startswith(media_url_prefix):
-            rel = rel[len(media_url_prefix):]
-        local_path = os.path.join(settings.MEDIA_ROOT, rel.lstrip("/"))
-        with open(local_path, "rb") as fh:
-            file_bytes = fh.read()
-        mime, _ = mimetypes.guess_type(local_path)
-        return file_bytes, mime or "image/png"
+    file_bytes = field.read()
+    # Rewind so the field is still usable after this call
+    try:
+        field.seek(0)
+    except Exception:
+        pass
+    mime, _ = mimetypes.guess_type(field.name or "")
+    if not mime:
+        # Last resort: sniff the first 4 bytes for common magic numbers
+        if file_bytes[:4] == b"%PDF":
+            mime = "application/pdf"
+        elif file_bytes[:6] in (b"GIF87a", b"GIF89a"):
+            mime = "image/gif"
+        elif file_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+            mime = "image/png"
+        elif file_bytes[:2] in (b"\xff\xd8", b"\xff\xe0", b"\xff\xe1"):
+            mime = "image/jpeg"
+        else:
+            mime = "image/png"
+    return file_bytes, mime
 
 
 def _build_embed(headline: str, body: str, attachment_name: str | None = None,
@@ -144,7 +134,7 @@ def send_to_discord(
     connection: ConnectionDiscord,
     headline: str,
     body: str,
-    image_url: str | None = None,
+    image_field=None,
 ) -> tuple[bool, str, str]:
     """
     Send a new message via Discord webhook.
@@ -154,8 +144,8 @@ def send_to_discord(
 
     Returns (success, discord_message_id, error_message).
     """
-    if image_url:
-        _img_bytes, _mime = _fetch_image(image_url)
+    if image_field:
+        _img_bytes, _mime = _fetch_attachment(image_field)
         _ext = _MIME_TO_EXT.get(_mime, ".png")
         attachment_name = f"upload{_ext}"
         gif = (_mime in _BARE_ATTACHMENT_MIMES)
@@ -168,7 +158,7 @@ def send_to_discord(
     url = _webhook_base_url(connection.webhook_url) + "?wait=true"
 
     try:
-        if image_url:
+        if image_field:
             resp = requests.post(
                 url, files=_make_files_payload(_img_bytes, _mime, payload), timeout=30
             )
@@ -206,7 +196,7 @@ def edit_discord_webhook_message(
     discord_message_id: str,
     headline: str,
     body: str,
-    image_url: str | None = None,
+    image_field=None,
 ) -> tuple[bool, str]:
     """
     Edit a previously sent Discord webhook message in-place.
@@ -226,8 +216,8 @@ def edit_discord_webhook_message(
     edit_url = (
         f"{_webhook_base_url(connection.webhook_url)}/messages/{discord_message_id}"
     )
-    if image_url:
-        _img_bytes, _mime = _fetch_image(image_url)
+    if image_field:
+        _img_bytes, _mime = _fetch_attachment(image_field)
         _ext = _MIME_TO_EXT.get(_mime, ".png")
         attachment_name = f"upload{_ext}"
         gif = (_mime in _BARE_ATTACHMENT_MIMES)
@@ -238,13 +228,18 @@ def edit_discord_webhook_message(
     embed = _build_embed(headline, body, attachment_name=attachment_name, is_gif=gif)
     payload = {"embeds": [embed]}
 
-    # API v10 requires explicitly passing attachments: [] to clear old attachments
-    # when re-sending without an image, otherwise the old image stays.
-    if not image_url:
+    # Discord PATCH attachment handling:
+    #   image present  → include attachments:[{id:0}] so Discord REPLACES slot 0
+    #                    with the new file[0] upload, instead of appending a 2nd copy.
+    #   no image       → include attachments:[] to explicitly clear any old attachment.
+    # Without one of these, Discord keeps the old attachment AND adds the new one.
+    if image_field:
+        payload["attachments"] = [{"id": 0}]
+    else:
         payload["attachments"] = []
 
     try:
-        if image_url:
+        if image_field:
             resp = requests.patch(
                 edit_url,
                 files=_make_files_payload(_img_bytes, _mime, payload),
@@ -288,13 +283,6 @@ def dispatch_message(message) -> None:
 
     connections = Connection.objects.filter(enabled=True)
 
-    image_url = None
-    if message.image:
-        try:
-            image_url = message.image.url
-        except Exception:
-            image_url = None
-
     any_success = False
     errors = []
 
@@ -306,7 +294,7 @@ def dispatch_message(message) -> None:
 
         if concrete.connection_type == "discord":
             success, remote_id, error_msg = send_to_discord(
-                concrete, message.headline, message.body, image_url=image_url
+                concrete, message.headline, message.body, image_field=message.image or None
             )
         else:
             error_msg = f"Unknown connection type: {concrete.connection_type}"
@@ -356,13 +344,6 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
     """
     from messaging.models import DeliveryReceipt
 
-    image_url = None
-    if message.image:
-        try:
-            image_url = message.image.url
-        except Exception:
-            pass
-
     results = {}
     receipts = DeliveryReceipt.objects.filter(
         message=message, success=True
@@ -393,7 +374,7 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
             receipt.remote_message_id,
             message.headline,
             message.body,
-            image_url=image_url,
+            image_field=message.image or None,
         )
 
         if ok:
