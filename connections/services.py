@@ -88,7 +88,13 @@ def _fetch_attachment(field) -> tuple[bytes, str]:
 
 def _build_embed(headline: str, body: str, attachment_name: str | None = None,
                  is_gif: bool = False) -> dict:
-    embed = {"title": headline, "description": body, "color": 0xE63946}
+    # Discord rejects embeds with empty string fields — omit title/description
+    # entirely when blank rather than sending "title": "".
+    embed: dict = {"color": 0xE63946}
+    if headline:
+        embed["title"] = headline
+    if body:
+        embed["description"] = body
     # GIFs and PDFs must NOT be referenced inside the embed image field.
     # GIF: Discord strips animation, showing only the first frame.
     # PDF: Discord cannot render PDFs as embed images at all.
@@ -96,6 +102,11 @@ def _build_embed(headline: str, body: str, attachment_name: str | None = None,
     # (GIF animates; PDF appears as a download card below the embed).
     if attachment_name and not is_gif:
         embed["image"] = {"url": f"attachment://{attachment_name}"}
+    # Discord requires at least one non-color field in an embed.
+    # This should never be reached because form validation prevents empty messages,
+    # but guard here so a malformed call fails loudly rather than silently.
+    if len(embed) == 1:  # only "color" key
+        embed["description"] = "​"  # zero-width space — invisible but valid
     return embed
 
 
