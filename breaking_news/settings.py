@@ -112,7 +112,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Falls back to local disk storage in development (runserver).
 CLOUDINARY_URL = config("CLOUDINARY_URL", default="")
 if CLOUDINARY_URL:
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    DEFAULT_FILE_STORAGE = "breaking_news.storage.SmartMediaCloudinaryStorage"
     CLOUDINARY_STORAGE = {
         "CLOUDINARY_URL": CLOUDINARY_URL,
         # "raw" allows Cloudinary to store non-image files (e.g. PDFs) without

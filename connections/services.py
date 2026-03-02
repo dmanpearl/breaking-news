@@ -55,19 +55,34 @@ def _fetch_image(image_url: str) -> tuple[bytes, str]:
 
     Absolute URL  → fetch from CDN (Cloudinary on Railway).
     Relative URL  → read from local MEDIA_ROOT (runserver).
-    The mime type is always derived from the actual content, never the URL,
-    because Cloudinary strips file extensions from public IDs.
+
+    MIME detection strategy (in priority order):
+      1. HTTP Content-Type header  — accurate for images (Cloudinary sniffs them).
+      2. URL path extension        — Cloudinary raw resources (PDFs) return
+                                     application/octet-stream as a generic header,
+                                     so we fall back to guessing from the URL path.
+      3. Hard-coded default        — image/png if all else fails.
     """
     import mimetypes
     import os
     from urllib.parse import urlparse
     from django.conf import settings
 
+    # Vague MIME types that Cloudinary returns for raw resources.
+    # Treat these as "unknown" and fall back to URL-path guessing.
+    _VAGUE_MIMES = {"application/octet-stream", "binary/octet-stream", ""}
+
     parsed = urlparse(image_url)
     if parsed.scheme:
         resp = requests.get(image_url, timeout=30)
         resp.raise_for_status()
-        mime = resp.headers.get("Content-Type", "image/png").split(";")[0].strip()
+        mime = resp.headers.get("Content-Type", "").split(";")[0].strip()
+        if not mime or mime in _VAGUE_MIMES:
+            # Cloudinary raw resources return octet-stream — guess from URL path.
+            # For raw resources Cloudinary preserves the original filename in the
+            # URL (e.g. .../message_images/report.pdf), so this works reliably.
+            guessed, _ = mimetypes.guess_type(parsed.path)
+            mime = guessed or "image/png"
         return resp.content, mime
     else:
         rel = parsed.path
