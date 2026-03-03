@@ -1,13 +1,16 @@
 # Breaking News
 
-A Django-based broadcast management system. Compose messages with a headline, body, and image attachment, then dispatch them to all registered destinations simultaneously. Initially supports multiple Discord accounts via webhooks.
+A Django-based broadcast management system. Compose messages with a headline,
+body, and image attachment, then dispatch them to all registered destinations
+simultaneously. Supports Discord (webhooks) and Slack (Bot Token Web API).
 
 ---
 
 ## Features
 
 - **Multi-destination broadcasting** — send one message to every enabled connection
-- **Discord support** — webhook-based delivery; optional bot-token message editing
+- **Discord support** — webhook-based delivery; edit and delete sent messages
+- **Slack support** — Bot Token Web API delivery; edit and delete sent messages
 - **Connection management** — enable/disable, status monitoring, per-connection health
 - **Role-based access** — three groups: `visitor` (view-only), `editor` (create/send), `admin` (everything)
 - **Inactivity auto-logout** — configurable warning countdown dialog
@@ -69,10 +72,8 @@ Visit **http://127.0.0.1:8000/** and log in with `admin` / `yourpassword`.
 
 The admin panel at `/admin/` is the primary place to:
 
-- Add/edit **Discord Connections** (`ConnectionDiscord` model)
-  - Paste a Discord Webhook URL
-  - Optionally add a Bot Token + Channel ID to enable message editing
-  - Toggle **Enabled** and **Can Edit Sent**
+- Add/edit **Discord Connections** (`ConnectionDiscord`) — see `README_DISCORD_CONNECTION.md`
+- Add/edit **Slack Connections** (`ConnectionSlack`) — see `README_SLACK_CONNECTION.md`
 - Manage **Users** and assign them to groups
 - Adjust **Site Settings** (inactivity timeout)
 
@@ -201,8 +202,11 @@ breaking_news/
 
 ## Adding New Connection Types
 
-1. Create a new model subclassing `Connection` (e.g., `ConnectionSlack`)
-2. Add a new value to `ConnectionType` choices
-3. Implement a `send_to_<platform>` function in `connections/services.py`
-4. Register the condition in `dispatch_message()` and `_edit_messages()`
-5. Register the model in `connections/admin.py`
+1. Create a new model subclassing `Connection` (e.g., `ConnectionEmail`)
+2. Add a new value to `ConnectionType` choices in `connections/models.py`
+3. Update `get_concrete()` in `Connection` to handle the new type
+4. Implement `send_to_<platform>`, `edit_<platform>_message`, and `delete_<platform>_message` in `connections/services.py`
+5. Wire the new type into `dispatch_message()`, `update_sent_messages()`, and `delete_sent_messages()`
+6. Register the model in `connections/admin.py`
+7. Update `test_connections` management command
+8. Create a migration

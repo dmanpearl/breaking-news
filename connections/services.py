@@ -24,7 +24,7 @@ import os
 
 import requests
 
-from .models import Connection, ConnectionDiscord, ConnectionStatus
+from .models import Connection, ConnectionDiscord, ConnectionSlack, ConnectionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -346,7 +346,7 @@ DELETE_SKIPPED_NOT_SENT = "skipped_not_sent"
 def delete_sent_messages(message) -> dict[str, tuple[str, str]]:
     """
     For a message that has been sent, attempt to delete it from every Discord
-    destination using the stored remote_message_id.
+    and Slack destination using the stored remote_message_id.
 
     Returns {connection_name: (status_code, detail_string)}.
     Status codes: DELETE_OK, DELETE_FAILED, DELETE_SKIPPED_NO_ID, DELETE_SKIPPED_NOT_SENT.
@@ -361,20 +361,26 @@ def delete_sent_messages(message) -> dict[str, tuple[str, str]]:
     for receipt in receipts:
         concrete = receipt.connection.get_concrete()
 
-        if concrete.connection_type != "discord":
+        if concrete.connection_type not in ("discord", "slack"):
             continue
 
         if not receipt.remote_message_id:
             results[concrete.name] = (
                 DELETE_SKIPPED_NO_ID,
-                "No Discord message ID stored — cannot delete.",
+                "No message ID stored — cannot delete.",
             )
             continue
 
-        ok, err = delete_discord_webhook_message(
-            concrete,
-            receipt.remote_message_id,
-        )
+        if concrete.connection_type == "discord":
+            ok, err = delete_discord_webhook_message(
+                concrete,
+                receipt.remote_message_id,
+            )
+        else:  # slack
+            ok, err = delete_slack_message(
+                concrete,
+                receipt.remote_message_id,
+            )
 
         if ok:
             results[concrete.name] = (DELETE_OK, "")
@@ -382,6 +388,268 @@ def delete_sent_messages(message) -> dict[str, tuple[str, str]]:
             results[concrete.name] = (DELETE_FAILED, err)
 
     return results
+
+
+# ── Slack ─────────────────────────────────────────────────────────────────────
+
+_SLACK_POST_URL = "https://slack.com/api/chat.postMessage"
+_SLACK_UPDATE_URL = "https://slack.com/api/chat.update"
+_SLACK_DELETE_URL = "https://slack.com/api/chat.delete"
+
+
+def _slack_headers(bot_token: str) -> dict:
+    return {
+        "Authorization": f"Bearer {bot_token}",
+        "Content-Type": "application/json",
+    }
+
+
+def _build_slack_blocks(headline: str, body: str) -> list:
+    """
+    Build a Slack Block Kit payload from headline and body.
+
+    Headline → bold header section.
+    Body     → plain text section.
+    At least one block is always present.
+    """
+    blocks = []
+    if headline:
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*{headline}*"},
+            }
+        )
+    if body:
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": body},
+            }
+        )
+    if not blocks:
+        # Guard: form validation prevents this, but be safe.
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": "\u200b"},  # zero-width space
+            }
+        )
+    return blocks
+
+
+def _parse_slack_error(resp: "requests.Response") -> str:
+    """Return a human-readable error string from a Slack API response."""
+    try:
+        data = resp.json()
+        return data.get("error", resp.text)
+    except Exception:
+        return resp.text
+
+
+def send_to_slack(
+    connection: ConnectionSlack,
+    headline: str,
+    body: str,
+    image_field=None,
+) -> tuple[bool, str, str]:
+    """
+    Send a new message via the Slack Web API (chat.postMessage).
+
+    Images/PDFs: Slack's file upload API changed in May 2024 and now requires
+    an async multi-step flow. File attachments are not supported in this version;
+    the message text content is always delivered. If an attachment is present, a
+    note is appended to the body so recipients know to check Breaking News.
+
+    Returns (success, slack_ts, error_message).
+    slack_ts is the message timestamp used for future edit/delete calls.
+    """
+    effective_body = body
+    if image_field:
+        fname = os.path.basename(image_field.name or "attachment")
+        note = f"\n\n_[Attachment: {fname} — view in Breaking News]_"
+        effective_body = (effective_body or "") + note
+
+    blocks = _build_slack_blocks(headline, effective_body)
+    # text is required as a fallback for notifications even when blocks are used.
+    fallback_text = headline or effective_body or "Breaking News"
+
+    payload = {
+        "channel": connection.channel_id,
+        "text": fallback_text,
+        "blocks": blocks,
+    }
+
+    try:
+        resp = requests.post(
+            _SLACK_POST_URL,
+            headers=_slack_headers(connection.bot_token),
+            json=payload,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        if not data.get("ok"):
+            error_msg = data.get("error", "Unknown Slack error")
+            logger.error("Slack send failed for %s: %s", connection.name, error_msg)
+            connection.status = ConnectionStatus.ERROR
+            connection.status_message = error_msg
+            connection.save(update_fields=["status", "status_message", "updated_at"])
+            return False, "", error_msg
+
+        slack_ts = data.get("ts", "")
+        connection.status = ConnectionStatus.OK
+        connection.status_message = "Last send successful."
+        connection.save(update_fields=["status", "status_message", "updated_at"])
+        return True, slack_ts, ""
+
+    except requests.HTTPError as exc:
+        error_msg = _parse_http_error(exc)
+        logger.error("Slack send failed for %s: %s", connection.name, error_msg)
+        connection.status = ConnectionStatus.ERROR
+        connection.status_message = error_msg
+        connection.save(update_fields=["status", "status_message", "updated_at"])
+        return False, "", error_msg
+
+    except Exception as exc:
+        error_msg = str(exc)
+        logger.error("Slack send failed for %s: %s", connection.name, exc)
+        connection.status = ConnectionStatus.ERROR
+        connection.status_message = error_msg
+        connection.save(update_fields=["status", "status_message", "updated_at"])
+        return False, "", error_msg
+
+
+def edit_slack_message(
+    connection: ConnectionSlack,
+    slack_ts: str,
+    headline: str,
+    body: str,
+    image_field=None,
+) -> tuple[bool, str]:
+    """
+    Edit a previously sent Slack message in-place via chat.update.
+
+    Returns (success, error_message).
+    """
+    if not slack_ts:
+        return (
+            False,
+            "No Slack message timestamp stored — cannot edit.",
+        )
+
+    effective_body = body
+    if image_field:
+        fname = os.path.basename(image_field.name or "attachment")
+        note = f"\n\n_[Attachment: {fname} — view in Breaking News]_"
+        effective_body = (effective_body or "") + note
+
+    blocks = _build_slack_blocks(headline, effective_body)
+    fallback_text = headline or effective_body or "Breaking News"
+
+    payload = {
+        "channel": connection.channel_id,
+        "ts": slack_ts,
+        "text": fallback_text,
+        "blocks": blocks,
+    }
+
+    try:
+        resp = requests.post(
+            _SLACK_UPDATE_URL,
+            headers=_slack_headers(connection.bot_token),
+            json=payload,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        if not data.get("ok"):
+            error_msg = data.get("error", "Unknown Slack error")
+            logger.error(
+                "Slack edit failed for %s ts %s: %s",
+                connection.name,
+                slack_ts,
+                error_msg,
+            )
+            return False, error_msg
+
+        return True, ""
+
+    except requests.HTTPError as exc:
+        error_msg = _parse_http_error(exc)
+        logger.error(
+            "Slack edit failed for %s ts %s: %s", connection.name, slack_ts, error_msg
+        )
+        return False, error_msg
+
+    except Exception as exc:
+        error_msg = str(exc)
+        logger.error(
+            "Slack edit failed for %s ts %s: %s", connection.name, slack_ts, exc
+        )
+        return False, error_msg
+
+
+def delete_slack_message(
+    connection: ConnectionSlack,
+    slack_ts: str,
+) -> tuple[bool, str]:
+    """
+    Delete a previously sent Slack message via chat.delete.
+
+    Returns (success, error_message).
+    """
+    if not slack_ts:
+        return (
+            False,
+            "No Slack message timestamp stored — cannot delete.",
+        )
+
+    payload = {
+        "channel": connection.channel_id,
+        "ts": slack_ts,
+    }
+
+    try:
+        resp = requests.post(
+            _SLACK_DELETE_URL,
+            headers=_slack_headers(connection.bot_token),
+            json=payload,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        if not data.get("ok"):
+            error_msg = data.get("error", "Unknown Slack error")
+            logger.error(
+                "Slack delete failed for %s ts %s: %s",
+                connection.name,
+                slack_ts,
+                error_msg,
+            )
+            return False, error_msg
+
+        return True, ""
+
+    except requests.HTTPError as exc:
+        error_msg = _parse_http_error(exc)
+        logger.error(
+            "Slack delete failed for %s ts %s: %s",
+            connection.name,
+            slack_ts,
+            error_msg,
+        )
+        return False, error_msg
+
+    except Exception as exc:
+        error_msg = str(exc)
+        logger.error(
+            "Slack delete failed for %s ts %s: %s", connection.name, slack_ts, exc
+        )
+        return False, error_msg
 
 
 def dispatch_message(message) -> None:
@@ -406,6 +674,10 @@ def dispatch_message(message) -> None:
 
         if concrete.connection_type == "discord":
             success, remote_id, error_msg = send_to_discord(
+                concrete, message.headline, message.body, image_field=message.image or None
+            )
+        elif concrete.connection_type == "slack":
+            success, remote_id, error_msg = send_to_slack(
                 concrete, message.headline, message.body, image_field=message.image or None
             )
         else:
@@ -445,11 +717,11 @@ EDIT_SKIPPED_NO_ID = "skipped_no_id"  # no stored message ID
 
 def update_sent_messages(message) -> dict[str, tuple[str, str]]:
     """
-    For a message that has already been sent, attempt to edit every Discord
-    destination in-place using the stored remote_message_id.
+    For a message that has already been sent, attempt to edit every
+    Discord and Slack destination in-place using the stored remote_message_id.
 
     can_edit_sent = False on a connection means we skip it intentionally
-    (the local record is updated but Discord is not touched).
+    (the local record is updated but the remote platform is not touched).
 
     Returns {connection_name: (status_code, detail_string)}.
     Status codes: EDIT_OK, EDIT_FAILED, EDIT_SKIPPED_DISABLED, EDIT_SKIPPED_NO_ID.
@@ -464,7 +736,7 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
     for receipt in receipts:
         concrete = receipt.connection.get_concrete()
 
-        if concrete.connection_type != "discord":
+        if concrete.connection_type not in ("discord", "slack"):
             continue
 
         if not concrete.can_edit_sent:
@@ -477,17 +749,26 @@ def update_sent_messages(message) -> dict[str, tuple[str, str]]:
         if not receipt.remote_message_id:
             results[concrete.name] = (
                 EDIT_SKIPPED_NO_ID,
-                "No Discord message ID stored — cannot edit.",
+                "No message ID stored — cannot edit.",
             )
             continue
 
-        ok, err = edit_discord_webhook_message(
-            concrete,
-            receipt.remote_message_id,
-            message.headline,
-            message.body,
-            image_field=message.image or None,
-        )
+        if concrete.connection_type == "discord":
+            ok, err = edit_discord_webhook_message(
+                concrete,
+                receipt.remote_message_id,
+                message.headline,
+                message.body,
+                image_field=message.image or None,
+            )
+        else:  # slack
+            ok, err = edit_slack_message(
+                concrete,
+                receipt.remote_message_id,
+                message.headline,
+                message.body,
+                image_field=message.image or None,
+            )
 
         if ok:
             results[concrete.name] = (EDIT_OK, "")

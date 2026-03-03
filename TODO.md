@@ -22,6 +22,7 @@
 - [x] PDF: Support PDF file format attachments
 - [x] Display sender's name with message info
 - [x] PDF bug: File downloads as 'upload.pdf', but should have the original filename.
+- [x] New Connection Type: Add Slack in addition to Discord.
 
 ## Open Items
 
@@ -30,4 +31,3 @@
 - [ ] Video: Support video file format attachments
 - [ ] Multi-Image Support: Allow attachment of multiple images to a message.
 - [ ] Metrics: Get any metrics from Discord about message views and other stats that may be available.
-- [ ] New Connection Type: Add another service we can post to in addition to Discord.

@@ -9,6 +9,7 @@ class ConnectionStatus(models.TextChoices):
 
 class ConnectionType(models.TextChoices):
     DISCORD = "discord", "Discord"
+    SLACK = "slack", "Slack"
 
 
 class Connection(models.Model):
@@ -43,6 +44,11 @@ class Connection(models.Model):
                 return self.connectiondiscord
             except ConnectionDiscord.DoesNotExist:
                 pass
+        if self.connection_type == ConnectionType.SLACK:
+            try:
+                return self.connectionslack
+            except ConnectionSlack.DoesNotExist:
+                pass
         return self
 
 
@@ -76,4 +82,51 @@ class ConnectionDiscord(Connection):
 
     def save(self, *args, **kwargs):
         self.connection_type = "discord"
+        super().save(*args, **kwargs)
+
+
+class ConnectionSlack(Connection):
+    """
+    Slack Bot Token connection.
+
+    Uses the Slack Web API (chat.postMessage / chat.update / chat.delete).
+    Requires a Bot Token (xoxb-...) with the chat:write scope, and the
+    channel_id of the target channel.
+
+    The message timestamp (ts) returned by chat.postMessage is stored in
+    DeliveryReceipt.remote_message_id and used for edit/delete operations.
+
+    can_edit_sent: when True, the Update action will call chat.update on the
+    existing Slack message in-place.
+    """
+
+    bot_token = models.CharField(
+        max_length=255,
+        help_text=(
+            "Slack Bot User OAuth Token (xoxb-...). "
+            "Requires the chat:write scope."
+        ),
+    )
+    channel_id = models.CharField(
+        max_length=64,
+        help_text=(
+            "Slack channel ID (e.g. C08ABCDEF12). "
+            "Right-click the channel in Slack → View channel details → copy the ID "
+            "from the bottom of the About tab."
+        ),
+    )
+    can_edit_sent = models.BooleanField(
+        default=False,
+        help_text=(
+            "When enabled, editing a sent message will update it in Slack. "
+            "Requires the original Slack message timestamp (ts) to have been stored on send."
+        ),
+    )
+
+    class Meta:
+        verbose_name = "Slack Connection"
+        verbose_name_plural = "Slack Connections"
+
+    def save(self, *args, **kwargs):
+        self.connection_type = "slack"
         super().save(*args, **kwargs)
