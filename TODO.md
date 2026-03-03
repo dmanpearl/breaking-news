@@ -22,10 +22,11 @@
 - [x] PDF: Support PDF file format attachments
 - [x] Display sender's name with message info
 - [x] PDF bug: File downloads as 'upload.pdf', but should have the original filename.
-- [x] New Connection Type: Add Slack in addition to Discord.
+- [x] New Connection Type: Add Slack (text-only) in addition to Discord.
 
 ## Open Items
 
+- [ ] Slack Connection: Add file attachment support.
 - [ ] Delete message capability.
 - [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
 - [ ] Video: Support video file format attachments
