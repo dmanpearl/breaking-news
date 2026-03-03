@@ -16,6 +16,16 @@
     width: 100%;
     box-sizing: border-box;
   }
+  /* Restore submit-row layout broken by global * { margin:0; padding:0 } reset */
+  #content .submit-row {
+    overflow: visible;
+    padding: 12px 14px;
+  }
+  #content .submit-row a.deletelink {
+    height: auto;
+    line-height: normal;
+    padding: 0.625rem 0.9375rem;
+  }
 </style>
 {% endblock %}
 

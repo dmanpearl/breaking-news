@@ -20,6 +20,8 @@ permission gate, not a Discord concept.
 
 import json
 import logging
+import os
+
 import requests
 
 from .models import Connection, ConnectionDiscord, ConnectionStatus
@@ -110,14 +112,16 @@ def _build_embed(headline: str, body: str, attachment_name: str | None = None,
     return embed
 
 
-def _make_files_payload(file_bytes: bytes, mime: str, payload: dict) -> dict:
+def _make_files_payload(file_bytes: bytes, mime: str, payload: dict, filename: str | None = None) -> dict:
     """Return a requests multipart files dict from pre-fetched image bytes.
 
     Accepts bytes + mime directly so callers that already fetched the image
     (to determine mime/gif status) don't fetch it a second time.
+    filename should be the bare filename (no path) to send to Discord.
     """
     ext = _MIME_TO_EXT.get(mime, ".png")
-    filename = f"upload{ext}"
+    if not filename:
+        filename = f"upload{ext}"
     return {
         "files[0]": (filename, file_bytes, mime),
         "payload_json": (None, json.dumps(payload), "application/json"),
@@ -158,7 +162,7 @@ def send_to_discord(
     if image_field:
         _img_bytes, _mime = _fetch_attachment(image_field)
         _ext = _MIME_TO_EXT.get(_mime, ".png")
-        attachment_name = f"upload{_ext}"
+        attachment_name = os.path.basename(image_field.name) or f"upload{_ext}"
         gif = (_mime in _BARE_ATTACHMENT_MIMES)
     else:
         _img_bytes, _mime = None, None
@@ -171,7 +175,7 @@ def send_to_discord(
     try:
         if image_field:
             resp = requests.post(
-                url, files=_make_files_payload(_img_bytes, _mime, payload), timeout=30
+                url, files=_make_files_payload(_img_bytes, _mime, payload, filename=attachment_name), timeout=30
             )
         else:
             resp = requests.post(url, json=payload, timeout=10)
@@ -230,7 +234,7 @@ def edit_discord_webhook_message(
     if image_field:
         _img_bytes, _mime = _fetch_attachment(image_field)
         _ext = _MIME_TO_EXT.get(_mime, ".png")
-        attachment_name = f"upload{_ext}"
+        attachment_name = os.path.basename(image_field.name) or f"upload{_ext}"
         gif = (_mime in _BARE_ATTACHMENT_MIMES)
     else:
         _img_bytes, _mime = None, None
@@ -253,7 +257,7 @@ def edit_discord_webhook_message(
         if image_field:
             resp = requests.patch(
                 edit_url,
-                files=_make_files_payload(_img_bytes, _mime, payload),
+                files=_make_files_payload(_img_bytes, _mime, payload, filename=attachment_name),
                 timeout=30,
             )
         else:

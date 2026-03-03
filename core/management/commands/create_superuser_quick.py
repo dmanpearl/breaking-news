@@ -12,10 +12,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--username", default="admin")
-        parser.add_argument("--email", default="admin@example.com")
+        parser.add_argument("--email", default="")
         parser.add_argument("--password", required=True)
-        parser.add_argument("--first-name", default="Admin")
-        parser.add_argument("--last-name", default="User")
+        parser.add_argument("--first-name", default="")
+        parser.add_argument("--last-name", default="")
 
     def handle(self, *args, **options):
         User = get_user_model()
