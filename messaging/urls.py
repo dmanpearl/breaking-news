@@ -10,5 +10,6 @@ urlpatterns = [
     path("<int:pk>/edit/", views.message_edit, name="edit"),
     path("<int:pk>/send/", views.message_send, name="send"),
     path("<int:pk>/delete/", views.message_delete, name="delete"),
+    path("<int:pk>/delete/confirm/", views.message_delete_confirm, name="delete_confirm"),
     path("history/", views.history_partial, name="history"),
 ]

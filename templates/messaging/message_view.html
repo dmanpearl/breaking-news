@@ -30,11 +30,7 @@
         {% if message.sent %}Resend{% else %}Send{% endif %}
       </button>
     </form>
-    <form method="post" action="{% url 'messaging:delete' message.pk %}" style="display:inline;"
-          onsubmit="return confirm('Delete this message?')">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-danger">Delete</button>
-    </form>
+    <a href="{% url 'messaging:delete_confirm' message.pk %}" class="btn btn-danger">Delete</a>
   {% endif %}
 </div>
 {% endblock %}

@@ -287,6 +287,103 @@ def edit_discord_webhook_message(
         return False, error_msg
 
 
+def delete_discord_webhook_message(
+    connection: ConnectionDiscord,
+    discord_message_id: str,
+) -> tuple[bool, str]:
+    """
+    Delete a previously sent Discord webhook message.
+
+    Uses DELETE /webhooks/{id}/{token}/messages/{message_id}.
+    No bot token required — the webhook URL encodes the credentials.
+    There is no time limit on deleting a webhook-owned message.
+
+    Returns (success, error_message).
+    """
+    if not discord_message_id:
+        return (
+            False,
+            "No Discord message ID stored — cannot delete.",
+        )
+
+    delete_url = (
+        f"{_webhook_base_url(connection.webhook_url)}/messages/{discord_message_id}"
+    )
+
+    try:
+        resp = requests.delete(delete_url, timeout=10)
+        resp.raise_for_status()
+        return True, ""
+
+    except requests.HTTPError as exc:
+        error_msg = _parse_http_error(exc)
+        logger.error(
+            "Discord delete failed for %s msg %s: %s",
+            connection.name,
+            discord_message_id,
+            error_msg,
+        )
+        return False, error_msg
+
+    except Exception as exc:
+        error_msg = str(exc)
+        logger.error(
+            "Discord delete failed for %s msg %s: %s",
+            connection.name,
+            discord_message_id,
+            exc,
+        )
+        return False, error_msg
+
+
+# Result status codes for delete_sent_messages (mirrors edit pattern)
+DELETE_OK = "ok"
+DELETE_FAILED = "failed"
+DELETE_SKIPPED_NO_ID = "skipped_no_id"
+DELETE_SKIPPED_NOT_SENT = "skipped_not_sent"
+
+
+def delete_sent_messages(message) -> dict[str, tuple[str, str]]:
+    """
+    For a message that has been sent, attempt to delete it from every Discord
+    destination using the stored remote_message_id.
+
+    Returns {connection_name: (status_code, detail_string)}.
+    Status codes: DELETE_OK, DELETE_FAILED, DELETE_SKIPPED_NO_ID, DELETE_SKIPPED_NOT_SENT.
+    """
+    from messaging.models import DeliveryReceipt
+
+    results = {}
+    receipts = DeliveryReceipt.objects.filter(
+        message=message, success=True
+    ).select_related("connection")
+
+    for receipt in receipts:
+        concrete = receipt.connection.get_concrete()
+
+        if concrete.connection_type != "discord":
+            continue
+
+        if not receipt.remote_message_id:
+            results[concrete.name] = (
+                DELETE_SKIPPED_NO_ID,
+                "No Discord message ID stored — cannot delete.",
+            )
+            continue
+
+        ok, err = delete_discord_webhook_message(
+            concrete,
+            receipt.remote_message_id,
+        )
+
+        if ok:
+            results[concrete.name] = (DELETE_OK, "")
+        else:
+            results[concrete.name] = (DELETE_FAILED, err)
+
+    return results
+
+
 def dispatch_message(message) -> None:
     """
     Dispatch a Message to all enabled connections.

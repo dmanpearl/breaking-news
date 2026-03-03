@@ -21,11 +21,11 @@
 - [x] Add eyeball button in password fields to view plaintext passwords (Login & Admin User Create)
 - [x] PDF: Support PDF file format attachments
 - [x] Display sender's name with message info
+- [x] PDF bug: File downloads as 'upload.pdf', but should have the original filename.
 
 ## Open Items
 
 - [ ] Delete message capability.
-- [ ] PDF bug: File downloads as 'upload.pdf', but should have the original filename.
 - [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
 - [ ] Video: Support video file format attachments
 - [ ] Multi-Image Support: Allow attachment of multiple images to a message.

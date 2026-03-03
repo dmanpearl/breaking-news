@@ -10,8 +10,12 @@ from connections.services import (
     EDIT_OK,
     EDIT_SKIPPED_DISABLED,
     EDIT_SKIPPED_NO_ID,
+    DELETE_OK,
+    DELETE_FAILED,
+    DELETE_SKIPPED_NO_ID,
     dispatch_message,
     update_sent_messages,
+    delete_sent_messages,
 )
 
 from core.models import SiteSettings
@@ -155,13 +159,30 @@ def message_send(request, pk):
 
 
 @login_required
+def message_delete_confirm(request, pk):
+    """GET: show the two-option delete confirmation page."""
+    message = get_object_or_404(Message, pk=pk)
+    ctx = _base_context()
+    ctx.update({"message": message})
+    return render(request, "messaging/delete_confirm.html", ctx)
+
+
+@login_required
 def message_delete(request, pk):
-    if request.method == "POST":
-        msg = get_object_or_404(Message, pk=pk)
-        msg.delete()
-        flash.success(request, "Message deleted.")
-        return redirect("messaging:index")
-    return redirect("messaging:detail", pk=pk)
+    """POST-only: delete a message. mode = 'everywhere' or 'local'."""
+    if request.method != "POST":
+        return redirect("messaging:delete_confirm", pk=pk)
+
+    msg = get_object_or_404(Message, pk=pk)
+    mode = request.POST.get("mode", "local")
+
+    if mode == "everywhere" and msg.sent:
+        results = delete_sent_messages(msg)
+        _report_delete_results(request, results)
+
+    msg.delete()
+    flash.success(request, "Message deleted from Breaking News.")
+    return redirect("messaging:index")
 
 
 @login_required
@@ -186,6 +207,24 @@ def _do_send(request, message):
     except Exception as exc:
         logger.error("Dispatch error: %s", exc)
         flash.error(request, f"Send error: {exc}")
+
+
+def _report_delete_results(request, results: dict):
+    """Flash a clear message for each connection delete outcome."""
+    if not results:
+        flash.warning(request, "No sent Discord messages found to delete.")
+        return
+
+    ok = [n for n, (s, _) in results.items() if s == DELETE_OK]
+    failed = [(n, e) for n, (s, e) in results.items() if s == DELETE_FAILED]
+    no_id = [(n, e) for n, (s, e) in results.items() if s == DELETE_SKIPPED_NO_ID]
+
+    if ok:
+        flash.success(request, f"Deleted from Discord: {', '.join(ok)}.")
+    for name, err in failed:
+        flash.error(request, f"Discord delete failed on {name}: {err}")
+    for name, _ in no_id:
+        flash.warning(request, f"Could not delete from {name} — no message ID stored.")
 
 
 def _report_edit_results(request, results: dict):

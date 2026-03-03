@@ -1,0 +1,85 @@
+{% extends "messaging/layout.html" %}
+
+{% block title %}Delete: {{ message.display_title }} - Breaking News{% endblock %}
+
+{% block sidebar_content %}
+  {% include "messaging/history_list.html" with active_id=message.pk %}
+{% endblock %}
+
+{% block page_toolbar %}
+<div class="main-toolbar">
+  <h1>Delete Message</h1>
+</div>
+{% endblock %}
+
+{% block main_content %}
+<div class="form-card">
+
+  <div style="margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--grey);margin-bottom:0.4rem;">Message</div>
+    <div style="font-weight:600;font-size:1rem;">{{ message.display_title }}</div>
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--grey);margin-top:0.25rem;">
+      {{ message.created_at|date:"M j, Y g:i a" }}
+      {% if message.sent %}
+        &nbsp;·&nbsp;<span style="color:#155724;">Sent</span>
+      {% else %}
+        &nbsp;·&nbsp;<span style="color:var(--grey);">Draft — not sent</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if message.sent %}
+  <div class="flash warning" style="margin-bottom:1.5rem;">
+    This message was sent to {{ message.delivery_summary.success }} destination{{ message.delivery_summary.success|pluralize }}.
+    Choose how to delete it below.
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem;">
+
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-weight:600;margin-bottom:0.35rem;">Delete everywhere</div>
+      <div style="font-size:0.85rem;color:var(--grey);margin-bottom:1rem;">
+        Removes the message from all Discord servers it was sent to, then deletes it here.
+        If a Discord delete fails, the local record is still removed and you will see a warning.
+      </div>
+      <form method="post" action="{% url 'messaging:delete' message.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="everywhere">
+        <button type="submit" class="btn btn-danger">Delete everywhere</button>
+      </form>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;">
+      <div style="font-weight:600;margin-bottom:0.35rem;">Delete local copy only</div>
+      <div style="font-size:0.85rem;color:var(--grey);margin-bottom:1rem;">
+        Removes the message from Breaking News only. The posted messages at Discord will remain.
+      </div>
+      <form method="post" action="{% url 'messaging:delete' message.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="local">
+        <button type="submit" class="btn btn-danger">Delete local copy only</button>
+      </form>
+    </div>
+
+  </div>
+
+  {% else %}
+  <div style="font-size:0.85rem;color:var(--grey);margin-bottom:1.5rem;">
+    This message is a draft and has not been sent anywhere. It will only be deleted here.
+  </div>
+  <form method="post" action="{% url 'messaging:delete' message.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="mode" value="local">
+    <div class="form-actions">
+      <button type="submit" class="btn btn-danger">Delete draft</button>
+      <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if message.sent %}
+  <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
+  {% endif %}
+
+</div>
+{% endblock %}
