@@ -25,11 +25,13 @@
 - [x] New Connection Type: Add Slack (text-only) in addition to Discord.
 - [x] Test: Confirm connection disable inhibits seend and removes green toolbar connection light
 - [x] Slack Connection: Add file attachment support.
+- [x] App icon: Update with a dark background.
 
 ## Open Items
 
 - [ ] Admin Connection View: Pythonic way to toggle Enabled from list view.
 - [ ] Delete message capability.
+- [ ] Support multiple send groups (for developers, disparate clients)
 - [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
 - [ ] Video: Support video file format attachments
 - [ ] Multi-Image Support: Allow attachment of multiple images to a message.
