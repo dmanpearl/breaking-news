@@ -25,18 +25,18 @@ The `ts` (timestamp) returned by `chat.postMessage` is stored in the
 Breaking News database as the message identifier. It is needed for all
 subsequent edit and delete operations.
 
-**Required OAuth scope:** `chat:write`
+**Required OAuth scopes:** `chat:write` and `files:write`
 
 **Time limits:** There are no time limits. A bot can edit or delete any
 message it originally posted, indefinitely, as long as the message still
 exists in the channel and the token has not been revoked.
 
-**Attachment note:** Slack's file upload API changed in May 2024 and now
-requires a multi-step async flow. In this version, file attachments (images,
-PDFs) are not uploaded to Slack. If a message has an attachment, a note is
-appended to the Slack message body indicating the filename and directing
-recipients to view it in Breaking News. Full Slack file upload support may
-be added in a future version.
+**Attachment support:** Images (PNG, JPG, GIF, WEBP) and PDFs are fully
+uploaded to Slack. Slack's file upload API requires a 3-step flow since May 2024
+(`files.getUploadURLExternal` → upload bytes → `files.completeUploadExternal`).
+Breaking News handles this transparently. The original filename is preserved so
+downloads from Slack keep the correct name. The `files:write` scope is required
+for this to work.
 
 ---
 
@@ -62,9 +62,9 @@ In the left sidebar, go to **OAuth & Permissions**.
 
 Scroll down to **Scopes → Bot Token Scopes** and click **Add an OAuth Scope**.
 
-Add: **`chat:write`**
+Add: **`chat:write`** and **`files:write`**
 
-That single scope is all that is required to send, edit, and delete messages.
+`chat:write` covers send, edit, and delete. `files:write` is required to upload image and PDF attachments.
 
 ### 4 — Install the App to Your Workspace
 
@@ -78,7 +78,7 @@ Review the permissions and click **Allow**.
 After installation, you will see a **Bot User OAuth Token** on the same page:
 
 ```
-Example: `xoxb-...xxx`
+xoxb-your-token-here
 ```
 
 Copy this token. Store it securely — treat it like a password. Anyone with
@@ -166,4 +166,4 @@ If a bot token is compromised:
 | `invalid_auth` error | Bot token is invalid, revoked, or has been typed incorrectly |
 | `missing_scope` error | The `chat:write` scope was not added — re-check step 3 |
 | Message sends but edit fails | `Can edit sent` is disabled, or the `ts` was not stored |
-| Attachment not visible in Slack | Expected — file upload to Slack is not yet supported; a note appears in the message body instead |
+| Attachment not showing in Slack | The `files:write` scope may be missing — re-check step 3 and reinstall the app |

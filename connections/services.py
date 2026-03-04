@@ -395,12 +395,18 @@ def delete_sent_messages(message) -> dict[str, tuple[str, str]]:
 _SLACK_POST_URL = "https://slack.com/api/chat.postMessage"
 _SLACK_UPDATE_URL = "https://slack.com/api/chat.update"
 _SLACK_DELETE_URL = "https://slack.com/api/chat.delete"
+_SLACK_GET_UPLOAD_URL = "https://slack.com/api/files.getUploadURLExternal"
+_SLACK_COMPLETE_UPLOAD_URL = "https://slack.com/api/files.completeUploadExternal"
 
 
 def _slack_headers(bot_token: str) -> dict:
+    # Only Authorization here. Content-Type is set per-request because it varies:
+    #   - chat.postMessage / completeUploadExternal → application/json  (json= kwarg)
+    #   - getUploadURLExternal                      → application/x-www-form-urlencoded  (data= kwarg)
+    # requests sets the correct Content-Type automatically when you use json= or data=,
+    # so we must NOT override it here or Step 1 will silently fail with ok:false.
     return {
         "Authorization": f"Bearer {bot_token}",
-        "Content-Type": "application/json",
     }
 
 
@@ -447,6 +453,91 @@ def _parse_slack_error(resp: "requests.Response") -> str:
         return resp.text
 
 
+
+def _slack_upload_file(
+    bot_token: str,
+    channel_id: str,
+    file_bytes: bytes,
+    filename: str,
+    mime: str,
+) -> tuple[bool, str, str]:
+    """
+    Upload a file to Slack using the 3-step external upload flow required
+    since May 2024 (files.upload is fully deprecated as of March 11, 2025).
+
+    Steps:
+      1. POST files.getUploadURLExternal  ->  upload_url + file_id
+      2. POST raw bytes to upload_url     ->  HTTP 200
+      3. POST files.completeUploadExternal with file_id + channel_id
+
+    The filename passed here is the bare filename (e.g. "myreport.pdf").
+    Slack preserves it as the download name when users click Download.
+
+    Returns (success, file_id, error_message).
+    """
+    headers = _slack_headers(bot_token)
+
+    # Step 1: get a one-time upload URL
+    try:
+        resp1 = requests.post(
+            _SLACK_GET_UPLOAD_URL,
+            headers=headers,
+            data={
+                "filename": filename,
+                "length": len(file_bytes),
+            },
+            timeout=10,
+        )
+        resp1.raise_for_status()
+        data1 = resp1.json()
+        if not data1.get("ok"):
+            return False, "", data1.get("error", "getUploadURLExternal failed")
+        upload_url = data1["upload_url"]
+        file_id = data1["file_id"]
+    except Exception as exc:
+        return False, "", f"getUploadURLExternal: {exc}"
+
+    # Step 2: POST file bytes to the pre-signed upload URL as multipart form data.
+    # Do NOT send the Authorization header here — Slack's pre-signed URL
+    # rejects extra auth headers with a 400 error.
+    # Must use multipart (files= kwarg) with the filename so Slack's CDN can
+    # register the mimetype/filetype. Sending raw bytes (data=) causes Slack to
+    # record mimetype='' and filetype='', which prevents the file from being
+    # shared to the channel in step 3.
+    try:
+        resp2 = requests.post(
+            upload_url,
+            files={"filename": (filename, file_bytes, mime)},
+            timeout=60,
+        )
+        if resp2.status_code != 200:
+            return False, "", (
+                f"Slack CDN upload failed: HTTP {resp2.status_code} — {resp2.text}"
+            )
+    except Exception as exc:
+        return False, "", f"Slack CDN upload: {exc}"
+
+    # Step 3: finalize and share to the channel.
+    try:
+        resp3 = requests.post(
+            _SLACK_COMPLETE_UPLOAD_URL,
+            headers=headers,
+            json={
+                "files": [{"id": file_id, "title": filename}],
+                "channel_id": channel_id,
+            },
+            timeout=15,
+        )
+        resp3.raise_for_status()
+        data3 = resp3.json()
+        if not data3.get("ok"):
+            return False, "", data3.get("error", "completeUploadExternal failed")
+    except Exception as exc:
+        return False, "", f"completeUploadExternal: {exc}"
+
+    return True, file_id, ""
+
+
 def send_to_slack(
     connection: ConnectionSlack,
     headline: str,
@@ -456,23 +547,22 @@ def send_to_slack(
     """
     Send a new message via the Slack Web API (chat.postMessage).
 
-    Images/PDFs: Slack's file upload API changed in May 2024 and now requires
-    an async multi-step flow. File attachments are not supported in this version;
-    the message text content is always delivered. If an attachment is present, a
-    note is appended to the body so recipients know to check Breaking News.
+    If an image or PDF is attached, it is uploaded first via the 3-step
+    files.getUploadURLExternal flow and shared to the channel. The file
+    upload is fire-and-forget relative to the text message: if the upload
+    fails, the text message is still sent and the error is logged but does
+    not mark the overall send as failed (the text always gets through).
+
+    File bytes come from _fetch_attachment(), which reads through Django's
+    storage backend — transparently Cloudinary on Railway, local disk in dev.
+    The original filename (os.path.basename of the field name) is preserved
+    so downloaded files keep their real name in both Slack and Discord.
 
     Returns (success, slack_ts, error_message).
-    slack_ts is the message timestamp used for future edit/delete calls.
+    slack_ts is stored in DeliveryReceipt.remote_message_id for edit/delete.
     """
-    effective_body = body
-    if image_field:
-        fname = os.path.basename(image_field.name or "attachment")
-        note = f"\n\n_[Attachment: {fname} — view in Breaking News]_"
-        effective_body = (effective_body or "") + note
-
-    blocks = _build_slack_blocks(headline, effective_body)
-    # text is required as a fallback for notifications even when blocks are used.
-    fallback_text = headline or effective_body or "Breaking News"
+    blocks = _build_slack_blocks(headline, body)
+    fallback_text = headline or body or "Breaking News"
 
     payload = {
         "channel": connection.channel_id,
@@ -502,7 +592,6 @@ def send_to_slack(
         connection.status = ConnectionStatus.OK
         connection.status_message = "Last send successful."
         connection.save(update_fields=["status", "status_message", "updated_at"])
-        return True, slack_ts, ""
 
     except requests.HTTPError as exc:
         error_msg = _parse_http_error(exc)
@@ -520,6 +609,33 @@ def send_to_slack(
         connection.save(update_fields=["status", "status_message", "updated_at"])
         return False, "", error_msg
 
+    # Upload attachment after a successful message send.
+    # A file upload failure is non-fatal — the message text already delivered.
+    if image_field:
+        try:
+            file_bytes, mime = _fetch_attachment(image_field)
+            filename = os.path.basename(image_field.name or "attachment")
+            ext = _MIME_TO_EXT.get(mime, "")
+            if not filename or filename == "attachment":
+                filename = f"attachment{ext}"
+            ok_upload, _fid, upload_err = _slack_upload_file(
+                connection.bot_token,
+                connection.channel_id,
+                file_bytes,
+                filename,
+                mime,
+            )
+            if not ok_upload:
+                logger.error(
+                    "Slack file upload failed for %s: %s", connection.name, upload_err
+                )
+        except Exception as exc:
+            logger.error(
+                "Slack file upload exception for %s: %s", connection.name, exc
+            )
+
+    return True, slack_ts, ""
+
 
 def edit_slack_message(
     connection: ConnectionSlack,
@@ -531,6 +647,13 @@ def edit_slack_message(
     """
     Edit a previously sent Slack message in-place via chat.update.
 
+    Note on attachments during edit: chat.update can only modify the text/blocks
+    of the original message. It cannot replace or remove files attached in a
+    previous send — Slack does not support replacing file attachments via
+    chat.update. If the edited message has an attachment, we upload it as a new
+    file to the channel (same as send). This matches Discord's edit behaviour
+    where the attachment is re-sent alongside the updated text.
+
     Returns (success, error_message).
     """
     if not slack_ts:
@@ -539,14 +662,8 @@ def edit_slack_message(
             "No Slack message timestamp stored — cannot edit.",
         )
 
-    effective_body = body
-    if image_field:
-        fname = os.path.basename(image_field.name or "attachment")
-        note = f"\n\n_[Attachment: {fname} — view in Breaking News]_"
-        effective_body = (effective_body or "") + note
-
-    blocks = _build_slack_blocks(headline, effective_body)
-    fallback_text = headline or effective_body or "Breaking News"
+    blocks = _build_slack_blocks(headline, body)
+    fallback_text = headline or body or "Breaking News"
 
     payload = {
         "channel": connection.channel_id,
@@ -575,8 +692,6 @@ def edit_slack_message(
             )
             return False, error_msg
 
-        return True, ""
-
     except requests.HTTPError as exc:
         error_msg = _parse_http_error(exc)
         logger.error(
@@ -590,6 +705,34 @@ def edit_slack_message(
             "Slack edit failed for %s ts %s: %s", connection.name, slack_ts, exc
         )
         return False, error_msg
+
+    # Upload attachment if present. Non-fatal: text edit already succeeded.
+    if image_field:
+        try:
+            file_bytes, mime = _fetch_attachment(image_field)
+            filename = os.path.basename(image_field.name or "attachment")
+            ext = _MIME_TO_EXT.get(mime, "")
+            if not filename or filename == "attachment":
+                filename = f"attachment{ext}"
+            ok_upload, _fid, upload_err = _slack_upload_file(
+                connection.bot_token,
+                connection.channel_id,
+                file_bytes,
+                filename,
+                mime,
+            )
+            if not ok_upload:
+                logger.error(
+                    "Slack file upload on edit failed for %s: %s",
+                    connection.name,
+                    upload_err,
+                )
+        except Exception as exc:
+            logger.error(
+                "Slack file upload exception on edit for %s: %s", connection.name, exc
+            )
+
+    return True, ""
 
 
 def delete_slack_message(
