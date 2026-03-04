@@ -137,6 +137,13 @@ CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # Railway terminates SSL at the load balancer and forwards requests to Django
+    # over plain HTTP internally. This header tells Django to trust Railway's
+    # X-Forwarded-Proto header so it knows the original request was HTTPS.
+    # Without this, CSRF checks can fail and secure cookie flags behave incorrectly.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Redirect any plain HTTP requests to HTTPS.
+    SECURE_SSL_REDIRECT = True
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 # Prints WARNING+ from Django internals and DEBUG+ from our own apps to the
