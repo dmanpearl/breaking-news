@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import ConnectionDiscord, ConnectionSlack
+from .models import Connection, ConnectionDiscord, ConnectionSlack
+
+
+@admin.register(Connection)
+class ConnectionAdmin(admin.ModelAdmin):
+    list_display = ("name", "connection_type", "enabled", "status", "updated_at")
+    list_display_links = ("name",)
+    list_editable = ("enabled",)
+    list_filter = ("connection_type", "enabled", "status")
+    readonly_fields = ("connection_type", "status", "status_message", "created_at", "updated_at")
 
 
 @admin.register(ConnectionDiscord)
