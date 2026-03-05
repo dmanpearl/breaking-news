@@ -27,12 +27,14 @@
 - [x] Slack Connection: Add file attachment support.
 - [x] App icon: Update with a dark background.
 - [x] Add better Connection management Enable/Disable controls in Admin view.
+- [x] Delete message capability.
+- [x] Deploy to Squarespace domain http://breakingnewsguys.com.
+- [x] Users without Editor, Staff, or Admin permission are no longer able to send or edit chat messages.
+- [x] When the app starts up, it should land on create message. Or if user doesn't have edit permission, it should land on View first message.
 
 ## Open Items
 
-- [ ] Delete message capability.
 - [ ] Support multiple send groups (for developers, disparate clients)
-- [ ] Deploy to custom domain (http://breakingnewschat.com, http://breakingnewsguys.com, http://thebreakingnewsguys.com)
 - [ ] Video: Support video file format attachments
 - [ ] Multi-Image Support: Allow attachment of multiple images to a message.
 - [ ] Metrics: Get any metrics from Discord about message views and other stats that may be available.

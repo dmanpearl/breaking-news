@@ -1,6 +1,7 @@
 """
 Management command: seed_groups
-Creates the 3 standard permission groups: admin, editor, visitor.
+Creates the 2 standard permission groups: visitor, editor.
+Run this once after deploy: python manage.py seed_groups
 """
 
 from django.contrib.auth.models import Group, Permission
@@ -12,7 +13,7 @@ from connections.models import Connection
 
 
 class Command(BaseCommand):
-    help = "Seed the three standard permission groups: admin, editor, visitor."
+    help = "Seed the two standard permission groups: visitor, editor."
 
     def handle(self, *args, **options):
         msg_ct = ContentType.objects.get_for_model(Message)
@@ -37,9 +38,9 @@ class Command(BaseCommand):
         )
         editor.permissions.set(editor_perms)
 
-        # ---------- admin ----------
-        admin_group, _ = Group.objects.get_or_create(name="admin")
-        all_perms = Permission.objects.filter(content_type__in=[msg_ct, conn_ct])
-        admin_group.permissions.set(all_perms)
+        # Remove the legacy admin group if it still exists in the database.
+        deleted, _ = Group.objects.filter(name="admin").delete()
+        if deleted:
+            self.stdout.write(self.style.WARNING("Deleted legacy 'admin' group."))
 
-        self.stdout.write(self.style.SUCCESS("Groups seeded: visitor, editor, admin"))
+        self.stdout.write(self.style.SUCCESS("Groups seeded: visitor, editor"))

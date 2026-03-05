@@ -6,8 +6,8 @@
 
   <!-- Header -->
   <header class="app-header">
-    <a href="{% url 'messaging:index' %}" class="logo">
-      <img src="{% static 'img/breaking-news.png' %}" alt="Breaking News" style="height:38px;width:auto;" />
+    <a href="{% url 'messaging:landing' %}" class="logo">
+      <img src="{% static 'img/breaking-news-dark.png' %}" alt="Breaking News" style="height:38px;width:auto;" />
     </a>
 
     <!-- Connection status indicators -->
@@ -34,10 +34,12 @@
   <aside class="app-sidebar">
     <div class="sidebar-header">
       <h2>History</h2>
+      {% if user_is_editor %}
       <a href="{% url 'messaging:create' %}" class="btn-create">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 1v10M1 6h10"/></svg>
         New
       </a>
+      {% endif %}
     </div>
     {% block sidebar_content %}{% endblock %}
   </aside>

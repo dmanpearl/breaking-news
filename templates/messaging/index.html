@@ -1,4 +1,5 @@
 {% extends "messaging/layout.html" %}
+{% load static %}
 {% block title %}Breaking News{% endblock %}
 
 {% block sidebar_content %}
@@ -7,14 +8,17 @@
 
 {% block main_content %}
 <div class="empty-state">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-    <path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/>
-    <path d="M17 8H7M17 12H7M13 16H7"/>
-  </svg>
-  <h3>Breaking News</h3>
-  <p>Send a message to registered destinations.</p>
+  <img src="{% static 'img/breaking-news-trans.png' %}" alt="Breaking News"
+       style="width:260px;height:auto;margin-bottom:1.5rem;" />
+  <p style="font-size:1.05rem;color:var(--grey);margin-bottom:1.75rem;">
+    Live market intelligence, instantly.
+  </p>
+  {% if user_is_editor %}
   <a href="{% url 'messaging:create' %}" class="btn-create" style="font-size:0.85rem;padding:0.5rem 1.25rem;">
     + Create Message
   </a>
+  {% elif not history %}
+  <p style="font-size:0.85rem;color:var(--grey);">No messages yet.</p>
+  {% endif %}
 </div>
 {% endblock %}

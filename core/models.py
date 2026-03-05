@@ -4,12 +4,12 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 
 class User(AbstractUser):
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, blank=True, null=True, default=None)
     phone = PhoneNumberField(blank=True)
     bio = models.TextField(blank=True)
 
     USERNAME_FIELD = "username"
-    REQUIRED_FIELDS = ["email", "first_name", "last_name"]
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     class Meta:
         ordering = ["username"]

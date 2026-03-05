@@ -19,18 +19,20 @@
   </h1>
 
   {% if mode == "view" and message %}
-    {% if message.can_edit %}
-      <a href="{% url 'messaging:edit' message.pk %}" class="btn">Edit</a>
-    {% else %}
-      <span class="btn" style="opacity:0.4;cursor:not-allowed;" title="Enable 'Can edit sent' on a connection to allow editing.">Edit</span>
+    {% if user_is_editor %}
+      {% if message.can_edit %}
+        <a href="{% url 'messaging:edit' message.pk %}" class="btn">Edit</a>
+      {% else %}
+        <span class="btn" style="opacity:0.4;cursor:not-allowed;" title="Enable 'Can edit sent' on a connection to allow editing.">Edit</span>
+      {% endif %}
+      <form method="post" action="{% url 'messaging:send' message.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-send">
+          {% if message.sent %}Resend{% else %}Send{% endif %}
+        </button>
+      </form>
+      <a href="{% url 'messaging:delete_confirm' message.pk %}" class="btn btn-danger">Delete</a>
     {% endif %}
-    <form method="post" action="{% url 'messaging:send' message.pk %}" style="display:inline;">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-send">
-        {% if message.sent %}Resend{% else %}Send{% endif %}
-      </button>
-    </form>
-    <a href="{% url 'messaging:delete_confirm' message.pk %}" class="btn btn-danger">Delete</a>
   {% endif %}
 </div>
 {% endblock %}

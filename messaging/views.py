@@ -25,26 +25,45 @@ from .models import Message
 logger = logging.getLogger(__name__)
 
 
-def _base_context():
+def is_editor(user):
+    """Return True if the user can create/edit/send/delete messages.
+
+    Editors are: Django superusers, Django staff, or members of the
+    'editor' or 'admin' groups.  Everyone else is treated as a viewer
+    (read-only).
+    """
+    if user.is_superuser or user.is_staff:
+        return True
+    return user.groups.filter(name__in=["editor", "admin"]).exists()
+
+
+def _base_context(request):
     """Common context injected into every messaging view."""
     settings = SiteSettings.get()
     return {
         "history": Message.objects.all(),
         "connections": Connection.objects.all(),
         "headline_enabled": settings.headline_enable,
+        "user_is_editor": is_editor(request.user),
     }
 
 
 @login_required
 def index(request):
-    return render(request, "messaging/index.html", _base_context())
+    if is_editor(request.user):
+        return redirect("messaging:create")
+    # Viewer: redirect to the most recent message, or show the empty landing page.
+    latest = Message.objects.first()
+    if latest:
+        return redirect("messaging:detail", pk=latest.pk)
+    return render(request, "messaging/index.html", _base_context(request))
 
 
 @login_required
 def message_detail(request, pk):
     message = get_object_or_404(Message, pk=pk)
     receipts = message.receipts.select_related("connection").all()
-    ctx = _base_context()
+    ctx = _base_context(request)
     just_sent = request.GET.get("just_sent") == "1"
     ctx.update(
         {
@@ -59,6 +78,12 @@ def message_detail(request, pk):
 
 @login_required
 def message_create(request):
+    if not is_editor(request.user):
+        flash.error(request, "You do not have permission to create messages.")
+        latest = Message.objects.first()
+        if latest:
+            return redirect("messaging:detail", pk=latest.pk)
+        return redirect("messaging:index")
     headline_enabled = SiteSettings.get().headline_enable
     if request.method == "POST":
         form = MessageForm(
@@ -83,13 +108,16 @@ def message_create(request):
             return redirect("messaging:detail", pk=msg.pk)
     else:
         form = MessageForm(headline_enabled=headline_enabled)
-    ctx = _base_context()
+    ctx = _base_context(request)
     ctx.update({"form": form, "mode": "create"})
     return render(request, "messaging/message_view.html", ctx)
 
 
 @login_required
 def message_edit(request, pk):
+    if not is_editor(request.user):
+        flash.error(request, "You do not have permission to edit messages.")
+        return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
     if not message.can_edit:
         flash.error(
@@ -139,7 +167,7 @@ def message_edit(request, pk):
         else:
             form = MessageForm(instance=message, headline_enabled=headline_enabled)
     receipts = message.receipts.select_related("connection").all()
-    ctx = _base_context()
+    ctx = _base_context(request)
     ctx.update({"form": form, "message": message, "receipts": receipts, "mode": "edit"})
     return render(request, "messaging/message_view.html", ctx)
 
@@ -147,6 +175,9 @@ def message_edit(request, pk):
 @login_required
 def message_send(request, pk):
     """POST-only: (re)send a message to all enabled connections."""
+    if not is_editor(request.user):
+        flash.error(request, "You do not have permission to send messages.")
+        return redirect("messaging:detail", pk=pk)
     if request.method != "POST":
         return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
@@ -161,8 +192,11 @@ def message_send(request, pk):
 @login_required
 def message_delete_confirm(request, pk):
     """GET: show the two-option delete confirmation page."""
+    if not is_editor(request.user):
+        flash.error(request, "You do not have permission to delete messages.")
+        return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
-    ctx = _base_context()
+    ctx = _base_context(request)
     ctx.update({"message": message})
     return render(request, "messaging/delete_confirm.html", ctx)
 
@@ -170,6 +204,9 @@ def message_delete_confirm(request, pk):
 @login_required
 def message_delete(request, pk):
     """POST-only: delete a message. mode = 'everywhere' or 'local'."""
+    if not is_editor(request.user):
+        flash.error(request, "You do not have permission to delete messages.")
+        return redirect("messaging:detail", pk=pk)
     if request.method != "POST":
         return redirect("messaging:delete_confirm", pk=pk)
 
@@ -183,6 +220,13 @@ def message_delete(request, pk):
     msg.delete()
     flash.success(request, "Message deleted from Breaking News.")
     return redirect("messaging:index")
+
+
+@login_required
+def landing(request):
+    """Always renders the landing/empty-state page regardless of message history.
+    Used by the nav logo easter egg so editors/viewers can always reach it."""
+    return render(request, "messaging/index.html", _base_context(request))
 
 
 @login_required
