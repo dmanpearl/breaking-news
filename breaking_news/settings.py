@@ -133,7 +133,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 PHONENUMBER_DEFAULT_REGION = "US"
 
 # HTTPS / CSRF settings for production
-CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+# CSRF_TRUSTED_ORIGINS is loaded from the env var. When not set we fall back to
+# an empty list, which causes Django to reject any POST (including login) from a
+# custom domain. The if-not-DEBUG block below ensures the production domains are
+# always trusted even if the env var is missing or misconfigured.
+_csrf_env = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+CSRF_TRUSTED_ORIGINS = _csrf_env if _csrf_env else []
+
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -144,6 +150,15 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     # Redirect any plain HTTP requests to HTTPS.
     SECURE_SSL_REDIRECT = True
+    # Ensure production domains are always in CSRF_TRUSTED_ORIGINS regardless of
+    # whether the env var was set. Merges with any env-var entries without duplicating.
+    _production_origins = [
+        "https://breakingnewsguys.com",
+        "https://www.breakingnewsguys.com",
+    ]
+    CSRF_TRUSTED_ORIGINS = list(
+        dict.fromkeys(CSRF_TRUSTED_ORIGINS + _production_origins)
+    )
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 # Prints WARNING+ from Django internals and DEBUG+ from our own apps to the
