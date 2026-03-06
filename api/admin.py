@@ -3,7 +3,6 @@ from django.utils.html import format_html
 
 from .models import APIKey
 
-
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
     list_display = (
