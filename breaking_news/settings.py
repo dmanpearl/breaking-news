@@ -24,9 +24,11 @@ INSTALLED_APPS = [
     "phonenumber_field",
     "cloudinary_storage",
     "cloudinary",
+    "ninja",
     "core",
     "messaging",
     "connections",
+    "api",
 ]
 
 MIDDLEWARE = [

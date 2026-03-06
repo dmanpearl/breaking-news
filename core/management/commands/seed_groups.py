@@ -1,6 +1,6 @@
 """
 Management command: seed_groups
-Creates the 2 standard permission groups: visitor, editor.
+Creates the standard permission groups: visitor, editor, api_consumer.
 Run this once after deploy: python manage.py seed_groups
 """
 
@@ -13,7 +13,7 @@ from connections.models import Connection
 
 
 class Command(BaseCommand):
-    help = "Seed the two standard permission groups: visitor, editor."
+    help = "Seed the standard permission groups: visitor, editor, api_consumer."
 
     def handle(self, *args, **options):
         msg_ct = ContentType.objects.get_for_model(Message)
@@ -38,9 +38,17 @@ class Command(BaseCommand):
         )
         editor.permissions.set(editor_perms)
 
+        # ---------- api_consumer ----------
+        # Grants access to the Breaking News pull API.
+        # No Django model permissions needed — the API is gated entirely by
+        # API key auth. The group exists for visibility and future scoping.
+        Group.objects.get_or_create(name="api_consumer")
+
         # Remove the legacy admin group if it still exists in the database.
         deleted, _ = Group.objects.filter(name="admin").delete()
         if deleted:
             self.stdout.write(self.style.WARNING("Deleted legacy 'admin' group."))
 
-        self.stdout.write(self.style.SUCCESS("Groups seeded: visitor, editor"))
+        self.stdout.write(
+            self.style.SUCCESS("Groups seeded: visitor, editor, api_consumer")
+        )

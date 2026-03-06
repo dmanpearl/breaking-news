@@ -31,10 +31,11 @@
 - [x] Deploy to Squarespace domain http://breakingnewsguys.com.
 - [x] Users without Editor, Staff, or Admin permission are no longer able to send or edit chat messages.
 - [x] When the app starts up, it should land on create message. Or if user doesn't have edit permission, it should land on View first message.
+- [x] Implement poll API so enterprise users can pull messages from us.
 
 ## Open Items
 
 - [ ] Support multiple send groups (for developers, disparate clients)
 - [ ] Video: Support video file format attachments
-- [ ] Multi-Image Support: Allow attachment of multiple images to a message.
+- [ ] Multi-Image Support: Allow attachment of multiple images to a message (Mike: Not needed).
 - [ ] Metrics: Get any metrics from Discord about message views and other stats that may be available.
