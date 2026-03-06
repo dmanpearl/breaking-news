@@ -192,13 +192,13 @@ _async_get_last_sent_id = sync_to_async(_get_last_sent_id)
 _async_get_new_messages = sync_to_async(_get_new_messages)
 
 
-async def _stream_messages(poll_interval: int = 5):
+async def _stream_messages(poll_interval: int = 1):
     """
     Async generator that yields SSE-formatted events.
 
     Sends a `connected` event immediately, then polls the database every
-    `poll_interval` seconds for new sent messages.  A `heartbeat` event
-    is sent every 30 seconds to keep the connection alive through proxies.
+    `poll_interval` seconds (default 1s) for new sent messages.  A `heartbeat`
+    event is sent every 15 seconds to keep the connection alive through proxies.
 
     All ORM access is delegated to sync helper functions wrapped with
     sync_to_async so Django's connection-per-thread rule is respected.
@@ -219,7 +219,7 @@ async def _stream_messages(poll_interval: int = 5):
             yield _sse_event(_message_to_dict(msg), event="message")
             last_id = msg.pk
 
-        if heartbeat_counter >= 30:
+        if heartbeat_counter >= 15:
             yield _sse_event({"ts": _time.time()}, event="heartbeat")
             heartbeat_counter = 0
 
