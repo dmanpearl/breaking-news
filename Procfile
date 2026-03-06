@@ -1,1 +1,1 @@
-web: gunicorn breaking_news.wsgi --worker-class gevent --workers 2 --log-file -
+web: uvicorn breaking_news.asgi:application --host 0.0.0.0 --port $PORT --workers 2

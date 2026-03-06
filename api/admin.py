@@ -3,6 +3,7 @@ from django.utils.html import format_html
 
 from .models import APIKey
 
+
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
     list_display = (
@@ -63,9 +64,13 @@ class APIKeyAdmin(admin.ModelAdmin):
                 '&nbsp;&nbsp;<button type="button" title="Copy to clipboard" '
                 'onclick="(function(){{var t=document.getElementById(\'bn-api-key\').innerText;'
                 'navigator.clipboard.writeText(t).then(function(){{var b=document.getElementById(\'bn-copy-btn\');'
-                'b.innerHTML=\'&#10003; Copied\';setTimeout(function(){{b.innerHTML=\'&#128203; Copy\'}},2000);}})}})()" '
+                'b.innerHTML=\'<svg width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;none&quot; stroke=&quot;green&quot; stroke-width=&quot;1.5&quot; style=&quot;vertical-align:middle&quot;><path d=&quot;M5 4H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-2&quot;/><rect x=&quot;5&quot; y=&quot;2&quot; width=&quot;8&quot; height=&quot;9&quot; rx=&quot;1&quot;/></svg> Copied &#10003;\';'
+                'setTimeout(function(){{b.innerHTML=\'<svg width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 16 16&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot; style=&quot;vertical-align:middle&quot;><path d=&quot;M5 4H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-2&quot;/><rect x=&quot;5&quot; y=&quot;2&quot; width=&quot;8&quot; height=&quot;9&quot; rx=&quot;1&quot;/></svg> Copy\'}},5000);}})}})()" '
                 'id="bn-copy-btn" style="cursor:pointer;padding:4px 10px;border:1px solid #ccc;'
-                'border-radius:4px;background:#fff;font-size:0.9rem;vertical-align:middle;">&#128203; Copy</button>'
+                'border-radius:4px;background:#fff;font-size:0.9rem;vertical-align:middle;">'
+                '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:middle">'
+                '<path d="M5 4H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-2"/>'
+                '<rect x="5" y="2" width="8" height="9" rx="1"/></svg> Copy</button>'
                 "</div>",
                 key,
             )

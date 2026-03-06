@@ -8,11 +8,12 @@ All endpoints (except /health) require a Bearer token:
 Obtain a key from the Breaking News admin panel under API → API Keys.
 """
 
+import asyncio
 import json
-import time
 from datetime import datetime
 from typing import Optional
 
+from asgiref.sync import sync_to_async
 from django.http import StreamingHttpResponse
 from django.utils.dateparse import parse_datetime
 from ninja import NinjaAPI, Query
@@ -170,43 +171,56 @@ def _message_to_dict(msg: Message) -> dict:
     }
 
 
-def _stream_messages(poll_interval: int = 5):
+def _get_last_sent_id():
+    """Return the PK of the most recent sent message, or 0."""
+    return Message.objects.filter(sent=True).values_list("id", flat=True).first() or 0
+
+
+def _get_new_messages(last_id):
+    """Return a list of sent messages with PK > last_id, oldest first.
+    select_related ensures created_by is loaded in-thread, not lazily in async.
     """
-    Generator that yields SSE-formatted events.
+    return list(
+        Message.objects.select_related("created_by")
+        .filter(sent=True, id__gt=last_id)
+        .order_by("id")
+    )
 
-    Sends a `connected` event immediately on connection, then polls the
-    database every `poll_interval` seconds for new sent messages and pushes
-    them to the client as `message` events.
 
-    Also sends a `heartbeat` event every 30 seconds to keep the connection
-    alive through proxies and load balancers.
+# Async-safe wrappers for ORM calls
+_async_get_last_sent_id = sync_to_async(_get_last_sent_id)
+_async_get_new_messages = sync_to_async(_get_new_messages)
 
-    NOTE: This is a polling-based SSE implementation. It does not require
-    Django Channels or Redis. The trade-off is a delivery latency equal to
-    `poll_interval` seconds (default 5s). For true zero-latency push,
-    Django Channels + Redis would be needed.
+
+async def _stream_messages(poll_interval: int = 5):
     """
-    # Send connected event immediately
+    Async generator that yields SSE-formatted events.
+
+    Sends a `connected` event immediately, then polls the database every
+    `poll_interval` seconds for new sent messages.  A `heartbeat` event
+    is sent every 30 seconds to keep the connection alive through proxies.
+
+    All ORM access is delegated to sync helper functions wrapped with
+    sync_to_async so Django's connection-per-thread rule is respected.
+    """
+    import time as _time
+
     yield _sse_event({"message": "Connected to Breaking News stream."}, event="connected")
 
-    last_id = (
-        Message.objects.filter(sent=True).values_list("id", flat=True).first() or 0
-    )
+    last_id = await _async_get_last_sent_id()
     heartbeat_counter = 0
 
     while True:
-        time.sleep(poll_interval)
+        await asyncio.sleep(poll_interval)
         heartbeat_counter += poll_interval
 
-        # Check for new sent messages since last seen ID
-        new_messages = Message.objects.filter(sent=True, id__gt=last_id).order_by("id")
+        new_messages = await _async_get_new_messages(last_id)
         for msg in new_messages:
             yield _sse_event(_message_to_dict(msg), event="message")
             last_id = msg.pk
 
-        # Heartbeat every 30 seconds to prevent proxy timeout
         if heartbeat_counter >= 30:
-            yield _sse_event({"ts": time.time()}, event="heartbeat")
+            yield _sse_event({"ts": _time.time()}, event="heartbeat")
             heartbeat_counter = 0
 
 
@@ -218,7 +232,7 @@ def _stream_messages(poll_interval: int = 5):
     response={200: None},
     include_in_schema=True,
 )
-def stream_messages(request, key: str = Query(..., description="Your API key.")):
+async def stream_messages(request, key: str = Query(..., description="Your API key.")):
     """
     **Server-Sent Events stream.**
 
@@ -258,8 +272,8 @@ def stream_messages(request, key: str = Query(..., description="Your API key."))
     es.addEventListener('message', e => console.log(JSON.parse(e.data)));
     ```
     """
-    # Manual auth for SSE — key comes from query param
-    api_key = APIKey.authenticate(key)
+    _authenticate = sync_to_async(APIKey.authenticate)
+    api_key = await _authenticate(key)
     if api_key is None:
         from django.http import HttpResponse
 
@@ -270,7 +284,7 @@ def stream_messages(request, key: str = Query(..., description="Your API key."))
         content_type="text/event-stream",
     )
     response["Cache-Control"] = "no-cache"
-    response["X-Accel-Buffering"] = "no"  # Disables Nginx response buffering
+    response["X-Accel-Buffering"] = "no"  # Disables Nginx/Railway response buffering
     return response
 
 
