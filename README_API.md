@@ -198,13 +198,10 @@ curl -N "http://127.0.0.1:8000/api/v1/stream?key=YOUR_API_KEY"
 | `message` | Each new sent message | Full message object (same schema as REST endpoints) |
 | `heartbeat` | Every 30 seconds | `{"ts": 1234567890.0}` |
 
-**⚠️ Railway / production note:**
-The SSE stream requires a persistent HTTP connection. Railway's Hobby plan
-closes connections after ~60 seconds. For production SSE, upgrade to
-Railway Pro where the request timeout is configurable.
-
-For Hobby plan or environments that close long-lived connections,
-use the polling pattern with `/messages?since=<timestamp>` instead.
+**⚠️ Swagger UI cannot test this endpoint** — Swagger makes a standard
+HTTP request and waits for the full response. It will spin forever on a
+streaming connection. Use `curl -N` or a browser `EventSource` instead
+(see examples above).
 
 ---
 

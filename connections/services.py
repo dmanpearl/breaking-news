@@ -841,12 +841,17 @@ def dispatch_message(message) -> None:
             },
         )
 
-    if any_success:
+    if not connections:
+        # No enabled connections — mark as sent so the message is available
+        # via the pull API and the UI shows it as delivered.
+        message.sent = True
+        message.last_error = ""
+    elif any_success:
         message.sent = True
         message.last_error = ""
     else:
         message.sent = False
-        message.last_error = "\n".join(errors) if errors else "No enabled connections."
+        message.last_error = "\n".join(errors)
 
     message.save(update_fields=["sent", "last_error"])
 

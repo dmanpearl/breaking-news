@@ -242,10 +242,21 @@ def stream_messages(request, key: str = Query(..., description="Your API key."))
     es.addEventListener('connected', e => console.log('ready', e.data));
     ```
 
-    **⚠️ Railway note:** persistent connections require the Pro plan
-    (configurable request timeout). On the Hobby plan, the connection will
-    be closed after ~60 seconds. For Hobby plan deployments, use the
-    polling endpoints (`/messages/latest` or `/messages?since=...`) instead.
+    **⚠️ Swagger UI cannot test this endpoint.** Swagger makes a standard
+    HTTP request and waits for the full response — it has no concept of a
+    streaming connection and will spin forever. Use one of the methods below
+    to test SSE:
+
+    **curl (recommended for testing):**
+    ```bash
+    curl -N "http://127.0.0.1:8000/api/v1/stream?key=YOUR_KEY"
+    ```
+
+    **Browser console:**
+    ```javascript
+    const es = new EventSource('/api/v1/stream?key=YOUR_KEY');
+    es.addEventListener('message', e => console.log(JSON.parse(e.data)));
+    ```
     """
     # Manual auth for SSE — key comes from query param
     api_key = APIKey.authenticate(key)
