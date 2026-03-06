@@ -60,7 +60,13 @@ class APIKeyAdmin(admin.ModelAdmin):
                 '<div style="background:#fffbcc;border:1px solid #e6c800;'
                 'padding:10px;border-radius:4px;font-family:monospace;font-size:1rem;">'
                 "<strong>⚠ Copy this key now — it will never be shown again:</strong><br><br>"
-                '<span style="user-select:all;font-size:1.1rem;">{}</span>'
+                '<span id="bn-api-key" style="user-select:all;font-size:1.1rem;font-family:monospace;">{}</span>'
+                '&nbsp;&nbsp;<button type="button" title="Copy to clipboard" '
+                'onclick="(function(){{var t=document.getElementById(\'bn-api-key\').innerText;'
+                'navigator.clipboard.writeText(t).then(function(){{var b=document.getElementById(\'bn-copy-btn\');'
+                'b.innerHTML=\'&#10003; Copied\';setTimeout(function(){{b.innerHTML=\'&#128203; Copy\'}},2000);}})}})()" '
+                'id="bn-copy-btn" style="cursor:pointer;padding:4px 10px;border:1px solid #ccc;'
+                'border-radius:4px;background:#fff;font-size:0.9rem;vertical-align:middle;">&#128203; Copy</button>'
                 "</div>",
                 key,
             )
