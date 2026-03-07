@@ -56,6 +56,7 @@ def _base_context(request):
         "headline_enabled": settings.headline_enable,
         "user_is_editor": is_editor(request.user),
         "user_is_api_consumer": is_api_consumer(request.user),
+        "user_is_staff": request.user.is_active and (request.user.is_staff or request.user.is_superuser),
     }
 
 

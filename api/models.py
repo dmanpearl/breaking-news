@@ -78,11 +78,11 @@ class APIKey(models.Model):
         return instance, plaintext
 
     @classmethod
-    def authenticate(cls, plaintext: str) -> "APIKey | None":
+    def authenticate(cls, plaintext: str, request=None) -> "APIKey | None":
         """
         Look up an active key by its plaintext value.
         Returns the APIKey instance or None if invalid/inactive.
-        Updates last_used_at on success.
+        Updates last_used_at and appends an APIKeyUsage log row on success.
         """
         from django.utils import timezone
 
@@ -91,6 +91,46 @@ class APIKey(models.Model):
             key = cls.objects.get(key_hash=h, is_active=True)
         except cls.DoesNotExist:
             return None
-        key.last_used_at = timezone.now()
+        now = timezone.now()
+        key.last_used_at = now
         key.save(update_fields=["last_used_at"])
+        APIKeyUsage.log(key, request)
         return key
+
+
+class APIKeyUsage(models.Model):
+    """
+    Append-only log of successful API key authentications.
+    Rows older than 120 days are pruned by the prune_api_usage management command.
+    """
+
+    api_key = models.ForeignKey(
+        APIKey,
+        on_delete=models.CASCADE,
+        related_name="usage_logs",
+    )
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True, default="")
+
+    class Meta:
+        verbose_name = "API Key Usage"
+        verbose_name_plural = "API Key Usage"
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.api_key.label} @ {self.timestamp:%Y-%m-%d %H:%M:%S}"
+
+    @classmethod
+    def log(cls, api_key: APIKey, request=None) -> None:
+        """Create a usage log row. Silently no-ops if anything goes wrong."""
+        try:
+            ip = None
+            ua = ""
+            if request is not None:
+                forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+                ip = forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR")
+                ua = request.META.get("HTTP_USER_AGENT", "")[:300]
+            cls.objects.create(api_key=api_key, ip_address=ip or None, user_agent=ua)
+        except Exception:
+            pass

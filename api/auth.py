@@ -14,4 +14,4 @@ class APIKeyAuth(HttpBearer):
     """
 
     def authenticate(self, request, token: str):
-        return APIKey.authenticate(token)
+        return APIKey.authenticate(token, request=request)

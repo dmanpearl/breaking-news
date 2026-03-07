@@ -18,4 +18,5 @@ urlpatterns = [
     path("", include("core.urls", namespace="core")),
     path("messages/", include("messaging.urls", namespace="messaging")),
     path("connections/", include("connections.urls", namespace="connections")),
+    path("api-admin/", include("api.urls", namespace="api_app")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

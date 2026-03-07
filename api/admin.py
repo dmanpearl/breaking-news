@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import APIKey
+from .models import APIKey, APIKeyUsage
 
 
 @admin.register(APIKey)
@@ -83,3 +83,17 @@ class APIKeyAdmin(admin.ModelAdmin):
         # Make the request accessible to plaintext_notice().
         self._current_request = request
         return super().change_view(request, object_id, form_url, extra_context)
+
+
+@admin.register(APIKeyUsage)
+class APIKeyUsageAdmin(admin.ModelAdmin):
+    list_display = ("api_key", "timestamp", "ip_address", "user_agent")
+    list_filter = ("api_key",)
+    readonly_fields = ("api_key", "timestamp", "ip_address", "user_agent")
+    ordering = ("-timestamp",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

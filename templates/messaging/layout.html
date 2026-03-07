@@ -28,6 +28,9 @@
       {% if user_is_api_consumer %}
       <a href="/api/v1/docs" target="_blank" rel="noopener">API Docs</a>
       {% endif %}
+      {% if user_is_staff %}
+      <a href="{% url 'api_app:usage' %}">API Usage</a>
+      {% endif %}
       <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
       <a href="{% url 'core:logout' %}">Log Out</a>
     </nav>

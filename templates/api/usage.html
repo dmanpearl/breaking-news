@@ -1,0 +1,376 @@
+{% extends "messaging/layout.html" %}
+{% load static %}
+
+{% block title %}API Usage Log — Breaking News{% endblock %}
+
+{% block extra_css %}
+<style>
+  .usage-page {
+    padding: 1.5rem 2rem 3rem;
+    max-width: 1200px;
+  }
+
+  .usage-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0;
+  }
+
+  .usage-title-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding-top: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .usage-page h1 {
+    font-family: var(--display);
+    font-size: 1.8rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+    color: var(--ink);
+  }
+
+  .usage-subtitle {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--grey);
+    margin-bottom: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Filter bar ── */
+  .usage-filters {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: flex-end;
+    background: var(--paper-dark);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .filter-group label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--grey);
+  }
+
+  .filter-group select,
+  .filter-group input[type="date"],
+  .filter-group input[type="text"] {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.6rem;
+    color: var(--ink);
+    min-width: 160px;
+    outline: none;
+  }
+
+  .filter-group select:focus,
+  .filter-group input:focus {
+    border-color: var(--action);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-self: flex-end;
+    padding-bottom: 1px;
+  }
+
+  /* ── Results summary ── */
+  .usage-summary {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--grey);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Table ── */
+  .usage-table-wrap {
+    overflow-x: auto;
+  }
+
+  .usage-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .usage-table thead th {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--grey);
+    border-bottom: 2px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    white-space: nowrap;
+    background: var(--paper-dark);
+  }
+
+  .usage-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  .usage-table tbody tr:hover {
+    background: var(--paper-dark);
+  }
+
+  .usage-table td {
+    padding: 0.55rem 0.75rem;
+    vertical-align: middle;
+    color: var(--ink);
+  }
+
+  .td-key {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .td-time {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    white-space: nowrap;
+    color: var(--grey);
+  }
+
+  .td-ip {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .td-ua {
+    font-size: 0.78rem;
+    color: var(--grey);
+    max-width: 340px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .badge-active {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .badge-revoked {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  /* ── Pagination ── */
+  .usage-pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1.25rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .usage-pagination a,
+  .usage-pagination span {
+    display: inline-block;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--ink);
+    text-decoration: none;
+    transition: background 0.1s;
+  }
+
+  .usage-pagination a:hover {
+    background: var(--paper-dark);
+  }
+
+  .usage-pagination .current-page {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .usage-pagination .disabled {
+    color: var(--border);
+    border-color: var(--border);
+    cursor: default;
+  }
+
+  .usage-empty {
+    padding: 3rem 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--grey);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="usage-page">
+
+  <div class="usage-title-row">
+    <div>
+      <h1>API Usage Log</h1>
+      <p class="usage-subtitle">Successful authentications — last 120 days</p>
+    </div>
+    <div class="usage-title-actions">
+      <a href="{% url 'messaging:index' %}" class="btn">← Back to App</a>
+      <button onclick="window.location.reload()" class="btn btn-primary">↺ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="usage-filters">
+    <div class="filter-group">
+      <label for="key_id">API Key</label>
+      <select name="key_id" id="key_id">
+        <option value="">All keys</option>
+        {% for key in all_keys %}
+        <option value="{{ key.pk }}" {% if selected_key_id == key.pk|stringformat:"s" %}selected{% endif %}>
+          {{ key.label }}{% if not key.is_active %} (revoked){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="date">Date</label>
+      <input
+        type="date"
+        name="date"
+        id="date"
+        value="{{ selected_date }}"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label for="user_agent">User Agent contains</label>
+      <input
+        type="text"
+        name="user_agent"
+        id="user_agent"
+        placeholder="e.g. curl, python, Mozilla"
+        value="{{ ua_filter }}"
+        style="min-width:220px;"
+      />
+    </div>
+
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <a href="{% url 'api_app:usage' %}" class="btn">Clear</a>
+    </div>
+  </form>
+
+  <!-- Summary -->
+  <p class="usage-summary">
+    {{ total_count }} result{{ total_count|pluralize }}
+    {% if selected_key_id or selected_date or ua_filter %}— filtered{% endif %}
+    &nbsp;·&nbsp; page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+  </p>
+
+  <!-- Table -->
+  {% if page_obj.object_list %}
+  <div class="usage-table-wrap">
+    <table class="usage-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>API Key</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+          <th>IP Address</th>
+          <th>User Agent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page_obj.object_list %}
+        <tr>
+          <td class="td-time" style="color:var(--border);">{{ row.pk }}</td>
+          <td class="td-key">{{ row.api_key.label }}</td>
+          <td>
+            {% if row.api_key.is_active %}
+            <span class="badge-active">Active</span>
+            {% else %}
+            <span class="badge-revoked">Revoked</span>
+            {% endif %}
+          </td>
+          <td class="td-time">{{ row.timestamp|date:"Y-m-d H:i:s" }} UTC</td>
+          <td class="td-ip">{{ row.ip_address|default:"—" }}</td>
+          <td class="td-ua" title="{{ row.user_agent }}">{{ row.user_agent|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav class="usage-pagination">
+    {% if page_obj.has_previous %}
+    <a href="?key_id={{ selected_key_id }}&date={{ selected_date }}&user_agent={{ ua_filter }}&page=1">&laquo; First</a>
+    <a href="?key_id={{ selected_key_id }}&date={{ selected_date }}&user_agent={{ ua_filter }}&page={{ page_obj.previous_page_number }}">&lsaquo; Prev</a>
+    {% else %}
+    <span class="disabled">&laquo; First</span>
+    <span class="disabled">&lsaquo; Prev</span>
+    {% endif %}
+
+    <span class="current-page">{{ page_obj.number }}</span>
+
+    {% if page_obj.has_next %}
+    <a href="?key_id={{ selected_key_id }}&date={{ selected_date }}&user_agent={{ ua_filter }}&page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
+    <a href="?key_id={{ selected_key_id }}&date={{ selected_date }}&user_agent={{ ua_filter }}&page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+    {% else %}
+    <span class="disabled">Next &rsaquo;</span>
+    <span class="disabled">Last &raquo;</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="usage-empty">No usage records match these filters.</div>
+  {% endif %}
+
+</div>
+{% endblock %}

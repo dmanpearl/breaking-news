@@ -282,7 +282,7 @@ async def stream_messages(request, key: str = Query(..., description="Your API k
     ```
     """
     _authenticate = sync_to_async(APIKey.authenticate)
-    api_key = await _authenticate(key)
+    api_key = await _authenticate(key, request=request)
     if api_key is None:
         from django.http import HttpResponse
 
