@@ -13,6 +13,12 @@ with a built-in interactive testing UI.
 | Local dev | `http://127.0.0.1:8000/api/v1` |
 | Production | `https://www.breakingnewsguys.com/api/v1` |
 
+> **Important:** Always use `https://www.breakingnewsguys.com` (with `www`) for
+> all production API requests. The apex domain (`breakingnewsguys.com`) is
+> forwarded by Squarespace and strips query parameters on redirect, which breaks
+> `?key=` authentication on the stream endpoint and causes confusing failures on
+> other endpoints. The `www` subdomain routes directly to Railway.
+
 ---
 
 ## Interactive Docs (Swagger UI)
@@ -185,9 +191,14 @@ es.onerror = err => {
 };
 ```
 
-**curl example (local dev):**
+**curl — local dev:**
 ```bash
 curl -N "http://127.0.0.1:8000/api/v1/stream?key=YOUR_API_KEY"
+```
+
+**curl — production (always use `www.`):**
+```bash
+curl -N "https://www.breakingnewsguys.com/api/v1/stream?key=YOUR_API_KEY"
 ```
 
 **Event types:**

@@ -37,6 +37,16 @@ def is_editor(user):
     return user.groups.filter(name__in=["editor", "admin"]).exists()
 
 
+def is_api_consumer(user):
+    """Return True if the user has access to the API docs nav link.
+
+    Superusers, staff, and members of the 'api_consumer' group all qualify.
+    """
+    if user.is_superuser or user.is_staff:
+        return True
+    return user.groups.filter(name="api_consumer").exists()
+
+
 def _base_context(request):
     """Common context injected into every messaging view."""
     settings = SiteSettings.get()
@@ -45,6 +55,7 @@ def _base_context(request):
         "connections": Connection.objects.all(),
         "headline_enabled": settings.headline_enable,
         "user_is_editor": is_editor(request.user),
+        "user_is_api_consumer": is_api_consumer(request.user),
     }
 
 

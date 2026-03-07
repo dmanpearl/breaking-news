@@ -25,6 +25,9 @@
     <div class="header-spacer"></div>
     <nav class="header-nav">
       <a href="{% url 'admin:index' %}">⚙ System Admin</a>
+      {% if user_is_api_consumer %}
+      <a href="/api/v1/docs" target="_blank" rel="noopener">API Docs</a>
+      {% endif %}
       <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
       <a href="{% url 'core:logout' %}">Log Out</a>
     </nav>
