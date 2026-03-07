@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "cloudinary_storage",
     "cloudinary",
     "ninja",
+    "corsheaders",
     "core",
     "messaging",
     "connections",
@@ -34,6 +35,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -190,3 +192,27 @@ LOGGING = {
         },
     },
 }
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# Allow the Breaking News reader app to call the API from the browser.
+# Add any additional reader origins to CORS_ALLOWED_ORIGINS via the env var
+# CORS_ALLOWED_ORIGINS (comma-separated), or extend the list below.
+_cors_env = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+CORS_ALLOWED_ORIGINS = list(_cors_env) if _cors_env else []
+
+_reader_origins = [
+    "https://reader.breakingnewsguys.com",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS + _reader_origins))
+
+# Only expose the API paths — the Django UI does not need CORS.
+CORS_URLS_REGEX = r"^/api/v1/.*$"
+
+# Allow the Authorization header and standard methods.
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+]
