@@ -207,6 +207,13 @@ _reader_origins = [
 ]
 CORS_ALLOWED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS + _reader_origins))
 
+# Allow any *.up.railway.app subdomain so Railway preview/staging URLs work
+# without needing to hardcode each one. Production traffic uses the explicit
+# reader.breakingnewsguys.com entry above.
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://[\w-]+\.up\.railway\.app$",
+]
+
 # Only expose the API paths — the Django UI does not need CORS.
 CORS_URLS_REGEX = r"^/api/v1/.*$"
 
