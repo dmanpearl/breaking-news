@@ -310,6 +310,7 @@
         <tr>
           <th>ID</th>
           <th>API Key</th>
+          <th>Owner</th>
           <th>Status</th>
           <th>Endpoint</th>
           <th class="ts-header">Timestamp</th>
@@ -324,6 +325,10 @@
           <td class="td-time" style="color:var(--border);">{{ row.pk }}</td>
 
           <td class="td-key">{{ row.api_key.label }}</td>
+
+          <td class="td-key" style="font-weight:normal;color:var(--grey);">
+            {{ row.api_key.owner.username }}
+          </td>
 
           <td>
             {% if row.api_key.is_active %}

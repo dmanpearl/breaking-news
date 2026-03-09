@@ -282,11 +282,30 @@ async def stream_messages(request, key: str = Query(..., description="Your API k
     ```
     """
     _authenticate = sync_to_async(APIKey.authenticate)
-    api_key = await _authenticate(key, request=request)
-    if api_key is None:
-        from django.http import HttpResponse
+    result = await _authenticate(key, request=request)
 
-        return HttpResponse("Unauthorized", status=401)
+    if result is None:
+        from django.http import JsonResponse
+
+        return JsonResponse({"detail": "Unauthorized"}, status=401)
+
+    if isinstance(result, tuple) and result[0] == "origin_rejected":
+        from django.http import JsonResponse
+
+        detected_origin = result[1] or "(no origin header)"
+        return JsonResponse(
+            {
+                "detail": (
+                    f"This API key is restricted to specific origins. "
+                    f"Detected origin: {detected_origin}. "
+                    f"Ask your administrator to add this origin to the key's allowed list."
+                ),
+                "detected_origin": detected_origin,
+            },
+            status=401,
+        )
+
+    api_key = result
 
     response = StreamingHttpResponse(
         _stream_messages(),

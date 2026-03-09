@@ -1,0 +1,216 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if new_api_key_plaintext %}
+<style>
+  /* ── Modal backdrop ── */
+  #bn-key-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Modal box ── */
+  #bn-key-modal {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+    padding: 2rem 2.25rem 1.75rem;
+    max-width: 560px;
+    width: calc(100% - 2rem);
+    z-index: 9999;
+    position: relative;
+    font-family: sans-serif;
+  }
+
+  #bn-key-modal h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+    color: #c00;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  #bn-key-modal p.bn-key-sub {
+    margin: 0 0 1.25rem;
+    font-size: 0.88rem;
+    color: #555;
+    line-height: 1.5;
+  }
+
+  /* ── Key display box ── */
+  #bn-key-modal .bn-key-box {
+    background: #fffbcc;
+    border: 1px solid #e6c800;
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    font-family: monospace;
+    font-size: 0.95rem;
+    word-break: break-all;
+    user-select: all;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+  }
+
+  /* ── Buttons row ── */
+  #bn-key-modal .bn-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  #bn-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  #bn-copy-btn:hover { background: #f5f5f5; }
+  #bn-copy-btn.copied { border-color: #2a9; color: #2a9; }
+
+  #bn-dismiss-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.25rem;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  #bn-dismiss-btn:hover { background: #111; }
+
+  #bn-dismiss-btn:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+
+  .bn-dismiss-hint {
+    font-size: 0.78rem;
+    color: #999;
+    margin-left: auto;
+  }
+</style>
+
+<div id="bn-key-modal-backdrop">
+  <div id="bn-key-modal" role="dialog" aria-modal="true" aria-labelledby="bn-modal-title">
+
+    <h2 id="bn-modal-title">
+      <span>&#9888;</span> Copy your API key now
+    </h2>
+    <p class="bn-key-sub">
+      This key will <strong>never be shown again</strong>. Copy it and store it
+      somewhere safe before dismissing this dialog.
+    </p>
+
+    <div class="bn-key-box" id="bn-key-text">{{ new_api_key_plaintext }}</div>
+
+    <div class="bn-modal-actions">
+      <button type="button" id="bn-copy-btn" onclick="bnCopyKey()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+             stroke="currentColor" stroke-width="1.5">
+          <path d="M5 4H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-2"/>
+          <rect x="5" y="2" width="8" height="9" rx="1"/>
+        </svg>
+        Copy to clipboard
+      </button>
+
+      <button type="button" id="bn-dismiss-btn" onclick="bnDismiss()" disabled>
+        Close
+      </button>
+
+      <span class="bn-dismiss-hint" id="bn-dismiss-hint">
+        Copy the key first to enable dismiss
+      </span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Prevent closing by clicking the backdrop or pressing Escape
+  // until the user has copied the key.
+  var copied = false;
+
+  document.getElementById("bn-key-modal-backdrop")
+    .addEventListener("click", function (e) {
+      if (e.target === this && !copied) {
+        shake();
+      }
+    });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !copied) {
+      e.preventDefault();
+      shake();
+    }
+  });
+
+  function shake() {
+    var modal = document.getElementById("bn-key-modal");
+    modal.style.transition = "transform 0.08s";
+    modal.style.transform = "scale(1.03)";
+    setTimeout(function () { modal.style.transform = "scale(1)"; }, 160);
+  }
+
+  window.bnCopyKey = function () {
+    var text = document.getElementById("bn-key-text").innerText.trim();
+    navigator.clipboard.write([new ClipboardItem({'text/plain': new Blob([text], {type: 'text/plain'})})]).then(function () {
+      copied = true;
+      var btn = document.getElementById("bn-copy-btn");
+      btn.classList.add("copied");
+      btn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<path d="M5 4H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-2"/>' +
+        '<rect x="5" y="2" width="8" height="9" rx="1"/></svg> Copied &#10003;';
+      document.getElementById("bn-dismiss-btn").disabled = false;
+      document.getElementById("bn-dismiss-hint").textContent = "";
+    }).catch(function () {
+      // Clipboard API unavailable — select the text so user can copy manually
+      var range = document.createRange();
+      range.selectNodeContents(document.getElementById("bn-key-text"));
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      alert("Automatic copy failed. The key text has been selected — press Ctrl+C / Cmd+C to copy it manually.");
+      copied = true;
+      document.getElementById("bn-dismiss-btn").disabled = false;
+      document.getElementById("bn-dismiss-hint").textContent = "";
+    });
+  };
+
+  window.bnDismiss = function () {
+    if (!copied) return;
+    document.getElementById("bn-key-modal-backdrop").remove();
+    // Clean the token from the URL so a reload does not re-show the modal
+    if (window.history && window.history.replaceState) {
+      var url = new URL(window.location.href);
+      url.searchParams.delete("_key_token");
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+})();
+</script>
+{% endif %}
+{% endblock %}
