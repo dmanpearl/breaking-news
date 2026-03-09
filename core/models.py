@@ -1,9 +1,29 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 
 
+class BNUserManager(UserManager):
+    """
+    Overrides email normalization so that a blank or missing email is stored
+    as NULL instead of an empty string. This prevents UNIQUE constraint
+    violations when multiple users are created without an email address.
+    Django's built-in AbstractUserManager.normalize_email() converts '' to ''
+    which is not NULL, causing the second blank-email user to fail.
+    """
+
+    @classmethod
+    def normalize_email(cls, email):
+        normalized = super().normalize_email(email)
+        return normalized if normalized else None
+
+    def _create_user(self, username, email, password, **extra_fields):
+        email = self.normalize_email(email)
+        return super()._create_user(username, email, password, **extra_fields)
+
+
 class User(AbstractUser):
+    objects = BNUserManager()
     email = models.EmailField(unique=True, blank=True, null=True, default=None)
     phone = PhoneNumberField(blank=True)
     bio = models.TextField(blank=True)

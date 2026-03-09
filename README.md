@@ -84,12 +84,31 @@ The admin panel at `/admin/` is the primary place to:
 | Command | Description |
 |---|---|
 | `seed_groups` | Create visitor / editor / admin permission groups |
-| `create_superuser_quick --password X` | Non-interactive superuser creation |
+| `create_superuser_quick --password X` | Non-interactive superuser creation (email optional) |
+| `list_users` | List all users with status columns |
+| `list_users --username X` | Show full details for a single user |
 | `list_connections` | Print all connections and their status |
 | `test_connections` | Send a test ping to all enabled connections |
 | `list_messages [--sent\|--unsent]` | List messages with send status |
 | `resend_message <id>` | Resend a specific message by PK |
 | `purge_drafts --confirm` | Delete all unsent draft messages |
+
+### User management examples
+
+```bash
+# List all users
+python manage.py list_users
+
+# Inspect one user
+python manage.py list_users --username dmanpearl
+
+# Create a superuser (email optional — omit to leave blank)
+python manage.py create_superuser_quick --username dmanpearl --password yourpassword
+python manage.py create_superuser_quick --username dmanpearl --password yourpassword --email david@example.com
+```
+
+> **Note:** Django's built-in `createsuperuser` command always prompts for email.
+> Use `create_superuser_quick` when scripting or when email is not needed.
 
 ---
 

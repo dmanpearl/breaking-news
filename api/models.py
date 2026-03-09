@@ -98,6 +98,31 @@ class APIKey(models.Model):
         return key
 
 
+# Maps request paths to human-friendly endpoint labels.
+_ENDPOINT_LABELS = {
+    "/api/v1/stream": "Stream",
+    "/api/v1/messages/latest": "Latest Message",
+    "/api/v1/messages": "Messages",
+    "/api/v1/health": "Health",
+    "/api/v1/docs": "Docs",
+    "/api/v1/redoc": "Redoc",
+}
+
+
+def _endpoint_label(path: str) -> str:
+    """Return a friendly label for a request path, falling back to the raw path."""
+    if not path:
+        return ""
+    # Exact match first
+    if path in _ENDPOINT_LABELS:
+        return _ENDPOINT_LABELS[path]
+    # Prefix match for /api/v1/messages/{id}
+    for prefix, label in _ENDPOINT_LABELS.items():
+        if path.startswith(prefix + "/"):
+            return label
+    return path
+
+
 class APIKeyUsage(models.Model):
     """
     Append-only log of successful API key authentications.
@@ -112,6 +137,19 @@ class APIKeyUsage(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=300, blank=True, default="")
+    endpoint = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Request path, e.g. /api/v1/stream",
+    )
+    referer = models.CharField(
+        max_length=300,
+        blank=True,
+        default="",
+        help_text="HTTP Referer header, indicates the calling origin.",
+    )
 
     class Meta:
         verbose_name = "API Key Usage"
@@ -121,16 +159,30 @@ class APIKeyUsage(models.Model):
     def __str__(self):
         return f"{self.api_key.label} @ {self.timestamp:%Y-%m-%d %H:%M:%S}"
 
+    @property
+    def endpoint_label(self) -> str:
+        return _endpoint_label(self.endpoint)
+
     @classmethod
     def log(cls, api_key: APIKey, request=None) -> None:
         """Create a usage log row. Silently no-ops if anything goes wrong."""
         try:
             ip = None
             ua = ""
+            endpoint = ""
+            referer = ""
             if request is not None:
                 forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
                 ip = forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR")
                 ua = request.META.get("HTTP_USER_AGENT", "")[:300]
-            cls.objects.create(api_key=api_key, ip_address=ip or None, user_agent=ua)
+                endpoint = (request.path or "")[:200]
+                referer = request.META.get("HTTP_REFERER", "")[:300]
+            cls.objects.create(
+                api_key=api_key,
+                ip_address=ip or None,
+                user_agent=ua,
+                endpoint=endpoint,
+                referer=referer,
+            )
         except Exception:
             pass

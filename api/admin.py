@@ -87,8 +87,8 @@ class APIKeyAdmin(admin.ModelAdmin):
 
 @admin.register(APIKeyUsage)
 class APIKeyUsageAdmin(admin.ModelAdmin):
-    list_display = ("api_key", "timestamp", "ip_address", "user_agent")
-    list_filter = ("api_key",)
+    list_display = ("api_key", "endpoint", "timestamp", "ip_address", "user_agent", "referer")
+    list_filter = ("api_key", "endpoint")
     readonly_fields = ("api_key", "timestamp", "ip_address", "user_agent")
     ordering = ("-timestamp",)
 
