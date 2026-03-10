@@ -303,8 +303,7 @@
     </div>
 
     <div class="filter-actions">
-      <button type="submit" class="btn btn-primary">Filter</button>
-      <a href="{% url 'api_app:usage' %}" class="btn">Clear</a>
+      <a href="{% url 'api_app:usage' %}" class="btn">Clear Filters</a>
     </div>
   </form>
 
@@ -425,6 +424,19 @@
 
 {% block extra_js %}
 <script>
+(function () {
+  "use strict";
+  // Auto-submit the filter form when any select changes.
+  var filterForm = document.querySelector(".usage-filters");
+  if (filterForm) {
+    filterForm.querySelectorAll("select").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        filterForm.submit();
+      });
+    });
+  }
+})();
+
 (function () {
   "use strict";
   var toggle = document.getElementById("utc-toggle");
