@@ -33,8 +33,9 @@
 - [x] When the app starts up, it should land on create message. Or if user doesn't have edit permission, it should land on View first message.
 - [x] Implement poll API so enterprise users can pull messages from us.
 - [x] Implement streaming API so enterprise users can open a socket with us and receive messages instantly.
+- [x] API Usage log.
+- [x] Tie all API keys to a User called owner.
 
 ## Open Items
 
-- [ ] Implement 'last_used_at' to track key activity per customer
 - [ ] Support multiple send groups (for developers and differing client types)
