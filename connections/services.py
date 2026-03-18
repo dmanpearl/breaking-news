@@ -799,13 +799,33 @@ def dispatch_message(message) -> None:
     """
     Dispatch a Message to all enabled connections.
 
-    Stores the Discord message ID in DeliveryReceipt.remote_message_id so
-    future edits can PATCH the same Discord message in-place.
+    Phase 1 -- immediate DB write:
+      Mark the message as sent right away, before any connection calls.
+      This makes the message visible to the SSE streaming endpoint and the
+      /messages/latest pull endpoint without waiting for Discord/Slack.
+
+    Phase 2 -- connection delivery:
+      Send to each enabled connection sequentially.  If every connection
+      fails, roll back sent=False and write the error detail.
+
+    Stores the Discord/Slack message ID in DeliveryReceipt.remote_message_id
+    so future edits can PATCH the same message in-place.
     """
     from messaging.models import DeliveryReceipt
 
     connections = Connection.objects.filter(enabled=True)
 
+    # Phase 1 -- write to DB immediately so the SSE stream picks it up now,
+    # not after waiting for all connection HTTP calls to finish.
+    message.sent = True
+    message.last_error = ""
+    message.save(update_fields=["sent", "last_error"])
+
+    # No connections -- nothing more to do.
+    if not connections:
+        return
+
+    # Phase 2 -- deliver to each connection and collect results.
     any_success = False
     errors = []
 
@@ -841,19 +861,12 @@ def dispatch_message(message) -> None:
             },
         )
 
-    if not connections:
-        # No enabled connections — mark as sent so the message is available
-        # via the pull API and the UI shows it as delivered.
-        message.sent = True
-        message.last_error = ""
-    elif any_success:
-        message.sent = True
-        message.last_error = ""
-    else:
+    # Phase 2 follow-up -- if every connection failed, roll back sent and
+    # record the errors so the UI can surface them.
+    if not any_success:
         message.sent = False
         message.last_error = "\n".join(errors)
-
-    message.save(update_fields=["sent", "last_error"])
+        message.save(update_fields=["sent", "last_error"])
 
 
 # Result status codes used by update_sent_messages

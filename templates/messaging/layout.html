@@ -66,4 +66,21 @@
   </main>
 
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // Auto-dismiss success flashes after 750ms.
+  // Errors and warnings stay visible until the user navigates away.
+  var successes = document.querySelectorAll('.flash.success');
+  if (!successes.length) return;
+  setTimeout(function () {
+    for (var i = 0; i < successes.length; i++) {
+      successes[i].classList.add('flash-hidden');
+    }
+  }, 750);
+})();
+</script>
 {% endblock %}

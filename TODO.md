@@ -35,10 +35,10 @@
 - [x] Implement streaming API so enterprise users can open a socket with us and receive messages instantly.
 - [x] API Usage log.
 - [x] Tie all API keys to a User called owner.
+- [x] Send messages faster
 
 ## Open Items
 
-- [ ] After sending a message, instantly transition to the new message screen
 - [ ] Bug: Messages send slowly. Look for parallization and other options
 - [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue

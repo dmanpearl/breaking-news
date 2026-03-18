@@ -180,7 +180,7 @@
         <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
       {% else %}
         <button type="submit" name="action" value="send" class="btn btn-send js-send-btn">Send</button>
-        <button type="submit" name="action" value="save" class="btn btn-secondary">Save</button>
+        <button type="submit" name="action" value="save" class="btn btn-secondary js-save-btn">Save</button>
         <a href="{% url 'messaging:index' %}" class="btn">Cancel</a>
       {% endif %}
     </div>
@@ -214,13 +214,27 @@
   function doSend() {
     if (!isReady()) return;
     var form = sendBtn.form;
-    // Set a hidden input so Django receives action=send
     var hidden = document.createElement('input');
-    hidden.type  = 'hidden';
-    hidden.name  = 'action';
+    hidden.type = 'hidden';
+    hidden.name = 'action';
     hidden.value = 'send';
     form.appendChild(hidden);
     form.submit();
+  }
+
+  // Save button: standard submit with action=save.
+  var saveBtn = document.querySelector('.js-save-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var form = saveBtn.form;
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'action';
+      hidden.value = 'save';
+      form.appendChild(hidden);
+      form.submit();
+    });
   }
 
   if (headline) headline.addEventListener('input', updateSendBtn);
@@ -270,6 +284,12 @@
   } else if (body) {
     body.focus();
   }
+
+  // Send button click -- intercept to call doSend() directly.
+  sendBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    doSend();
+  });
 
   // ── Paste & Drag-and-Drop image support ─────────────────────────────────
   var dropZone = document.getElementById('drop-zone');
@@ -352,14 +372,6 @@
     if (dropHint) dropHint.style.display = 'none';
   }
 })();
-</script>
-{% endif %}
-
-{% if just_sent %}
-<script>
-setTimeout(function () {
-  window.location.href = '{% url "messaging:create" %}';
-}, 1500);
 </script>
 {% endif %}
 

@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
+import time as _time
 
 
 class BNUserManager(UserManager):
@@ -60,12 +61,24 @@ class SiteSettings(models.Model):
 
     @classmethod
     def get(cls):
+        # Simple in-process cache -- SiteSettings rarely changes.
+        # Cache is invalidated immediately on save() and expires after 60s
+        # as a safety net. Using a module-level dict avoids any import-time
+        # dependency on Django's cache framework.
+        cache = cls.__dict__.get("_settings_cache")
+        if cache is not None:
+            obj, expires = cache
+            if _time.monotonic() < expires:
+                return obj
         obj, _ = cls.objects.get_or_create(pk=1)
+        cls._settings_cache = (obj, _time.monotonic() + 60)
         return obj
 
     def save(self, *args, **kwargs):
         self.pk = 1
         super().save(*args, **kwargs)
+        # Invalidate the in-process cache so the next request sees new values.
+        type(self)._settings_cache = None
 
     def delete(self, *args, **kwargs):
         pass  # prevent deletion

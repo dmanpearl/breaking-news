@@ -4,7 +4,6 @@ from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from connections.models import Connection
 from connections.services import (
     EDIT_FAILED,
     EDIT_OK,
@@ -51,8 +50,7 @@ def _base_context(request):
     """Common context injected into every messaging view."""
     settings = SiteSettings.get()
     return {
-        "history": Message.objects.all(),
-        "connections": Connection.objects.all(),
+        "history": Message.objects.select_related("created_by").all(),
         "headline_enabled": settings.headline_enable,
         "user_is_editor": is_editor(request.user),
         "user_is_api_consumer": is_api_consumer(request.user),
@@ -76,13 +74,11 @@ def message_detail(request, pk):
     message = get_object_or_404(Message, pk=pk)
     receipts = message.receipts.select_related("connection").all()
     ctx = _base_context(request)
-    just_sent = request.GET.get("just_sent") == "1"
     ctx.update(
         {
             "message": message,
             "receipts": receipts,
             "mode": "view",
-            "just_sent": just_sent,
         }
     )
     return render(request, "messaging/message_view.html", ctx)
@@ -96,7 +92,10 @@ def message_create(request):
         if latest:
             return redirect("messaging:detail", pk=latest.pk)
         return redirect("messaging:index")
-    headline_enabled = SiteSettings.get().headline_enable
+    # Read SiteSettings once -- _base_context also calls it, but that
+    # call is deferred to render time; we need headline_enabled now.
+    settings = SiteSettings.get()
+    headline_enabled = settings.headline_enable
     if request.method == "POST":
         form = MessageForm(
             request.POST, request.FILES, headline_enabled=headline_enabled
@@ -108,13 +107,9 @@ def message_create(request):
             action = request.POST.get("action", "save")
             if action == "send":
                 _do_send(request, msg)
-                if msg.sent:
-                    from django.urls import reverse
-
-                    return redirect(
-                        reverse("messaging:detail", kwargs={"pk": msg.pk})
-                        + "?just_sent=1"
-                    )
+                # Redirect to create so the editor can compose the next message
+                # immediately. The sent message is visible in the history sidebar.
+                return redirect("messaging:create")
             else:
                 flash.success(request, "Draft saved.")
             return redirect("messaging:detail", pk=msg.pk)
@@ -158,7 +153,7 @@ def message_edit(request, pk):
             return redirect("messaging:detail", pk=msg.pk)
     else:
         # If headline is disabled and this message has one, migrate it into body.
-        if not SiteSettings.get().headline_enable and message.headline:
+        if not headline_enabled and message.headline:
             merged_body = (
                 (message.headline + "\n\n" + message.body)
                 if message.body
@@ -194,10 +189,6 @@ def message_send(request, pk):
         return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
     _do_send(request, message)
-    if message.sent:
-        from django.urls import reverse
-
-        return redirect(f"{reverse('messaging:detail', kwargs={'pk': pk})}?just_sent=1")
     return redirect("messaging:detail", pk=pk)
 
 
@@ -245,7 +236,7 @@ def landing(request):
 def history_partial(request):
     """Returns only the history list partial (for HTMX / reactive use)."""
     return render(
-        request, "messaging/history_list.html", {"history": Message.objects.all()}
+        request, "messaging/history_list.html", {"history": Message.objects.select_related("created_by").all()}
     )
 
 
