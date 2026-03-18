@@ -7,11 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from connections.services import (
     EDIT_FAILED,
     EDIT_OK,
-    EDIT_SKIPPED_DISABLED,
-    EDIT_SKIPPED_NO_ID,
     DELETE_OK,
     DELETE_FAILED,
-    DELETE_SKIPPED_NO_ID,
     dispatch_message,
     update_sent_messages,
     delete_sent_messages,
@@ -107,11 +104,7 @@ def message_create(request):
             action = request.POST.get("action", "save")
             if action == "send":
                 _do_send(request, msg)
-                # Redirect to create so the editor can compose the next message
-                # immediately. The sent message is visible in the history sidebar.
                 return redirect("messaging:create")
-            else:
-                flash.success(request, "Draft saved.")
             return redirect("messaging:detail", pk=msg.pk)
     else:
         form = MessageForm(headline_enabled=headline_enabled)
@@ -257,55 +250,37 @@ def _do_send(request, message):
 
 
 def _report_delete_results(request, results: dict):
-    """Flash a clear message for each connection delete outcome."""
+    """Flash results for connection deletes.
+
+    Only reports when something actually happened -- no flash when all
+    connections are disabled and results is empty.
+    """
     if not results:
-        flash.warning(request, "No sent Discord messages found to delete.")
-        return
+        return  # no enabled connections -- nothing happened, nothing to report
 
     ok = [n for n, (s, _) in results.items() if s == DELETE_OK]
     failed = [(n, e) for n, (s, e) in results.items() if s == DELETE_FAILED]
-    no_id = [(n, e) for n, (s, e) in results.items() if s == DELETE_SKIPPED_NO_ID]
 
     if ok:
         flash.success(request, f"Deleted from Discord: {', '.join(ok)}.")
     for name, err in failed:
         flash.error(request, f"Discord delete failed on {name}: {err}")
-    for name, _ in no_id:
-        flash.warning(request, f"Could not delete from {name} — no message ID stored.")
 
 
 def _report_edit_results(request, results: dict):
-    """Flash a clear message for each connection edit outcome."""
+    """Flash results for connection edits.
+
+    Only reports when something actually happened -- no flash when all
+    connections are disabled and results is empty.
+    """
     if not results:
-        flash.warning(
-            request,
-            "Local changes saved. No connections attempted — "
-            "either no messages have been sent yet, or all receipts are missing.",
-        )
+        flash.success(request, "Local changes saved.")
         return
 
     ok = [n for n, (s, _) in results.items() if s == EDIT_OK]
     failed = [(n, e) for n, (s, e) in results.items() if s == EDIT_FAILED]
-    disabled = [(n, e) for n, (s, e) in results.items() if s == EDIT_SKIPPED_DISABLED]
-    no_id = [(n, e) for n, (s, e) in results.items() if s == EDIT_SKIPPED_NO_ID]
 
     if ok:
         flash.success(request, f"Discord updated on: {', '.join(ok)}.")
-
     for name, err in failed:
         flash.error(request, f"Edit failed on {name}: {err}")
-
-    for name, _ in disabled:
-        flash.warning(
-            request,
-            f"Local changes saved, but '{name}' was not updated in Discord — "
-            f"'Can edit sent' is disabled on that connection. "
-            f"Enable it in the admin panel to allow in-place Discord edits.",
-        )
-
-    for name, _ in no_id:
-        flash.warning(
-            request,
-            f"Local changes saved, but '{name}' could not be edited — "
-            f"no Discord message ID was stored for that delivery.",
-        )
