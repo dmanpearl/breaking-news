@@ -36,9 +36,17 @@
 - [x] API Usage log.
 - [x] Tie all API keys to a User called owner.
 - [x] Send messages faster
+- [x] Fix connection exhaustion under SSE load bug, PostgreSQL error "sorry, too many clients already"
 
 ## Open Items
 
+- [ ] Breaking News history list auto-refreshes as new messages arrive from another node.
+- [ ] Display more message info in the history panel:
+    1. Always display up to four lines of text in the history panel.
+    2. Provide spin-down capability to display the entire text and image for any message right there in the history panel.
+    3. Provide a toggle that spins-opens all messages simultaneously. Setting is persistent per user.
+    4. Make history panel wider.
+    5. Make history pane width adjustable. Setting is persistent. Edge case caution!
 - [ ] Bug: Messages send slowly. Look for parallization and other options
 - [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue

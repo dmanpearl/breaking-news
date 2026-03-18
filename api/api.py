@@ -202,12 +202,23 @@ async def _stream_messages(poll_interval: int = 5):
 
     All ORM access is delegated to sync helper functions wrapped with
     sync_to_async so Django's connection-per-thread rule is respected.
+
+    DB connections are closed after each poll so the generator does not hold
+    a connection open during the sleep interval. Django reopens the connection
+    on the next poll automatically.
     """
     import time as _time
+    from django.db import connection as _db_connection
+
+    _close_db = sync_to_async(lambda: _db_connection.close())
 
     yield _sse_event({"message": "Connected to Breaking News stream."}, event="connected")
 
     last_id = await _async_get_last_sent_id()
+    # Release the connection used for the initial query -- don't hold it
+    # open during the first sleep.
+    await _close_db()
+
     heartbeat_counter = 0
 
     while True:
@@ -222,6 +233,10 @@ async def _stream_messages(poll_interval: int = 5):
         if heartbeat_counter >= 30:
             yield _sse_event({"ts": _time.time()}, event="heartbeat")
             heartbeat_counter = 0
+
+        # Release the DB connection after every poll so it isn't held open
+        # during the sleep. Django will reopen it on the next poll.
+        await _close_db()
 
 
 @api.get(
