@@ -38,4 +38,11 @@
 
 ## Open Items
 
+- [ ] After sending a message, instantly transition to the new message screen
+- [ ] Bug: Messages send slowly. Look for parallization and other options
+- [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
+      I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue
+      Refreshed and help I had to go to a different URL I had to go to the Messages breaking news page instead of the login breaking news page
+- [ ] Implement Usage Log for Users similar to the existing API Usage Log
+- [ ] Admin panel delete messages bulk one of the confirmation buttons is truncated (bottom half cut off)
 - [ ] Support multiple send groups (for developers and differing client types)
