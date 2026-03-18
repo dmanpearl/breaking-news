@@ -1,9 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 
 from .forms import LoginForm, RegisterForm
+
+_SIDEBAR_MIN = 180
+_SIDEBAR_MAX = 750
+_SIDEBAR_DEFAULT = 280
 
 
 def login_view(request):
@@ -34,3 +40,35 @@ def profile_view(request):
             "connections": Connection.objects.all(),
         },
     )
+
+
+@login_required
+@require_POST
+def save_sidebar_width(request):
+    """Save the user's preferred sidebar width. Called by the drag handler."""
+    from .models import UserPreferences
+
+    try:
+        width = int(request.POST.get("width", _SIDEBAR_DEFAULT))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "invalid width"}, status=400)
+
+    # Clamp to allowed range -- JS also enforces this, but defend server-side.
+    width = max(_SIDEBAR_MIN, min(_SIDEBAR_MAX, width))
+
+    prefs = UserPreferences.for_user(request.user)
+    prefs.sidebar_width = width
+    prefs.save(update_fields=["sidebar_width"])
+    return JsonResponse({"width": width})
+
+
+@login_required
+@require_POST
+def reset_preferences(request):
+    """Reset all user preferences to defaults."""
+    from .models import UserPreferences
+
+    prefs = UserPreferences.for_user(request.user)
+    prefs.sidebar_width = _SIDEBAR_DEFAULT
+    prefs.save(update_fields=["sidebar_width"])
+    return redirect(request.POST.get("next", "messaging:index"))

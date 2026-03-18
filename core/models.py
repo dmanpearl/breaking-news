@@ -1,7 +1,8 @@
+import time as _time
+
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
-import time as _time
 
 
 class BNUserManager(UserManager):
@@ -37,6 +38,33 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.get_full_name()} ({self.username})"
+
+
+class UserPreferences(models.Model):
+    """Per-user UI preferences. One row per user, created lazily on first use."""
+
+    user = models.OneToOneField(
+        "core.User",
+        on_delete=models.CASCADE,
+        related_name="preferences",
+    )
+    sidebar_width = models.PositiveIntegerField(
+        default=280,
+        help_text="History sidebar width in pixels (180-750).",
+    )
+
+    class Meta:
+        verbose_name = "User Preferences"
+        verbose_name_plural = "User Preferences"
+
+    def __str__(self):
+        return f"Preferences for {self.user}"
+
+    @classmethod
+    def for_user(cls, user):
+        """Return preferences for user, creating the row if not yet present."""
+        obj, _ = cls.objects.get_or_create(user=user)
+        return obj
 
 
 class SiteSettings(models.Model):

@@ -43,9 +43,8 @@ class Message(models.Model):
         if self.headline:
             return self.headline
         if self.body:
-            # First non-empty line, truncated
-            first_line = self.body.strip().splitlines()[0]
-            return first_line[:60] + ("..." if len(first_line) > 60 else "")
+            # First non-empty line -- full text, truncated visually in the sidebar via CSS.
+            return self.body.strip().splitlines()[0]
         if self.image:
             try:
                 import os

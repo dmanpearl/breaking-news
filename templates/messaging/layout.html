@@ -2,37 +2,50 @@
 {% load static %}
 
 {% block body %}
-<div class="app-shell">
+<div class="app-shell" data-sidebar-w="{{ sidebar_width }}">
 
   <!-- Header -->
   <header class="app-header">
     <a href="{% url 'messaging:landing' %}" class="logo">
-      <img src="{% static 'img/breaking-news-dark.png' %}" alt="Breaking News" style="height:38px;width:auto;" />
+      <span class="app-wordmark">Breaking News<span class="app-wordmark-guys">Guys</span></span>
     </a>
-
-    <!-- Connection status indicators -->
-    <div id="conn-status-panel" class="conn-panel" style="background:transparent;border:none;padding:0 1rem;">
-      {% for conn in connections %}
-      <div class="conn-chip {% if not conn.enabled %}disabled{% endif %}" data-conn-id="{{ conn.id }}" title="{{ conn.status_message }}">
-        <span class="dot {% if conn.enabled %}{{ conn.status }}{% endif %}"></span>
-        {{ conn.name }}
-      </div>
-      {% empty %}
-      <span style="font-family:var(--mono);font-size:0.7rem;color:#666;">No connections</span>
-      {% endfor %}
-    </div>
 
     <div class="header-spacer"></div>
     <nav class="header-nav">
-      <a href="{% url 'admin:index' %}">⚙ System Admin</a>
-      {% if user_is_api_consumer %}
-      <a href="/api/v1/docs" target="_blank" rel="noopener">API Docs</a>
-      {% endif %}
-      {% if user_is_staff %}
-      <a href="{% url 'api_app:usage' %}">API Usage</a>
-      {% endif %}
+
       <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
-      <a href="{% url 'core:logout' %}">Log Out</a>
+
+      <!-- Tools dropdown -->
+      <div class="acct-menu" id="tools-menu">
+        <button class="acct-trigger" id="tools-trigger" aria-haspopup="true" aria-expanded="false">
+          Tools &#9660;
+        </button>
+        <div class="acct-dropdown" id="tools-dropdown" role="menu">
+          <a href="{% url 'admin:index' %}" class="acct-item" role="menuitem">System Admin</a>
+          {% if user_is_api_consumer %}
+          <a href="/api/v1/docs" target="_blank" rel="noopener" class="acct-item" role="menuitem">API Docs</a>
+          {% endif %}
+          {% if user_is_staff %}
+          <a href="{% url 'api_app:usage' %}" class="acct-item" role="menuitem">API Usage</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Account dropdown -->
+      <div class="acct-menu" id="acct-menu">
+        <button class="acct-trigger" id="acct-trigger" aria-haspopup="true" aria-expanded="false">
+          Account &#9660;
+        </button>
+        <div class="acct-dropdown" id="acct-dropdown" role="menu">
+          <form method="post" action="{% url 'core:reset_preferences' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="acct-item" role="menuitem">Reset Preferences</button>
+          </form>
+          <a href="{% url 'core:logout' %}" class="acct-item" role="menuitem">Log Out</a>
+        </div>
+      </div>
+
     </nav>
   </header>
 
@@ -48,6 +61,8 @@
       {% endif %}
     </div>
     {% block sidebar_content %}{% endblock %}
+    <!-- Drag handle on the right edge of the sidebar -->
+    <div class="sidebar-drag-handle" id="sidebar-drag-handle" title="Drag to resize"></div>
   </aside>
 
   <!-- Main -->
@@ -72,15 +87,168 @@
 {% block extra_js %}
 <script>
 (function () {
-  // Auto-dismiss success flashes after 750ms.
-  // Errors and warnings stay visible until the user navigates away.
+  // ── Auto-dismiss success flashes after 750ms ──────────────────────────
   var successes = document.querySelectorAll('.flash.success');
-  if (!successes.length) return;
-  setTimeout(function () {
-    for (var i = 0; i < successes.length; i++) {
-      successes[i].classList.add('flash-hidden');
+  if (successes.length) {
+    setTimeout(function () {
+      for (var i = 0; i < successes.length; i++) {
+        successes[i].classList.add('flash-hidden');
+      }
+    }, 750);
+  }
+
+  // ── Sidebar resize ────────────────────────────────────────────────────
+  var shell = document.querySelector('.app-shell');
+  var savedW = shell && parseInt(shell.getAttribute('data-sidebar-w'), 10);
+  var SIDEBAR_MIN = 180;
+  var SIDEBAR_MAX = 750;
+  var SIDEBAR_DEFAULT = 280;
+  // Minimum pixels to leave for the main content panel so the Send/Save/
+  // Cancel buttons are never squished.
+  var MAIN_MIN = 400;
+
+  function clamp(v) {
+    // 75% of viewport, but also never shrink the main panel below MAIN_MIN.
+    var byPercent = Math.floor(window.innerWidth * 0.75);
+    var byMainMin = window.innerWidth - MAIN_MIN;
+    var ceiling = Math.min(SIDEBAR_MAX, byPercent, byMainMin);
+    return Math.max(SIDEBAR_MIN, Math.min(ceiling, v));
+  }
+
+  // On mobile (<=700px) the CSS media query overrides the grid to 1fr.
+  function isMobile() {
+    return window.innerWidth <= 700;
+  }
+
+  if (savedW && !isMobile()) {
+    shell.style.setProperty('--sidebar-w', clamp(savedW) + 'px');
+  }
+
+  var handle = document.getElementById('sidebar-drag-handle');
+  if (!handle) return;
+
+  var dragging = false;
+  var saveTimer = null;
+
+  handle.addEventListener('mousedown', function (e) {
+    if (isMobile()) return;
+    e.preventDefault();
+    dragging = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function (e) {
+    if (!dragging) return;
+    var newW = clamp(e.clientX);
+    shell.style.setProperty('--sidebar-w', newW + 'px');
+  });
+
+  document.addEventListener('mouseup', function () {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      var current = parseInt(
+        shell.style.getPropertyValue('--sidebar-w'), 10
+      );
+      if (!current || isNaN(current)) return;
+      current = clamp(current);
+
+      var fd = new FormData();
+      fd.append('width', current);
+      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fetch('{% url "core:save_sidebar_width" %}', {
+        method: 'POST',
+        body: fd,
+      });
+    }, 300);
+  });
+
+  window.addEventListener('resize', function () {
+    if (isMobile()) return;
+    var current = parseInt(shell.style.getPropertyValue('--sidebar-w'), 10);
+    if (!current || isNaN(current)) return;
+    shell.style.setProperty('--sidebar-w', clamp(current) + 'px');
+  });
+
+  // ── Dropdown helper ───────────────────────────────────────────────────
+  function initDropdown(triggerId, dropdownId, menuId) {
+    var trigger = document.getElementById(triggerId);
+    var dropdown = document.getElementById(dropdownId);
+    var menu = document.getElementById(menuId);
+    if (!trigger || !dropdown) return;
+
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      // Close any other open dropdowns first.
+      document.querySelectorAll('.acct-dropdown.open').forEach(function (d) {
+        if (d !== dropdown) {
+          d.classList.remove('open');
+          var t = d.previousElementSibling;
+          if (t) t.setAttribute('aria-expanded', 'false');
+        }
+      });
+      var open = trigger.getAttribute('aria-expanded') === 'true';
+      trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+      dropdown.classList.toggle('open', !open);
+    });
+
+    document.addEventListener('mousedown', function (e) {
+      if (menu && !menu.contains(e.target)) {
+        trigger.setAttribute('aria-expanded', 'false');
+        dropdown.classList.remove('open');
+      }
+    });
+  }
+
+  initDropdown('tools-trigger', 'tools-dropdown', 'tools-menu');
+  initDropdown('acct-trigger', 'acct-dropdown', 'acct-menu');
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.acct-dropdown.open').forEach(function (d) {
+        d.classList.remove('open');
+      });
+      document.querySelectorAll('.acct-trigger').forEach(function (t) {
+        t.setAttribute('aria-expanded', 'false');
+      });
     }
-  }, 750);
+  });
+
+  // ── History panel arrow-key navigation ───────────────────────────────
+  // Up/Down arrows move between messages when focus is not inside a text
+  // input or textarea.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+    // Don't hijack arrow keys while the user is typing.
+    var tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    var items = Array.from(document.querySelectorAll('.history-item'));
+    if (!items.length) return;
+
+    var activeIdx = items.findIndex(function (el) {
+      return el.classList.contains('active');
+    });
+
+    var nextIdx;
+    if (e.key === 'ArrowUp') {
+      nextIdx = activeIdx <= 0 ? 0 : activeIdx - 1;
+    } else {
+      nextIdx = activeIdx < 0 ? 0 : Math.min(activeIdx + 1, items.length - 1);
+    }
+
+    if (nextIdx === activeIdx) return; // already at boundary
+
+    e.preventDefault(); // stop the page from scrolling
+    items[nextIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    window.location.href = items[nextIdx].href;
+  });
 })();
 </script>
 {% endblock %}

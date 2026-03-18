@@ -35,7 +35,7 @@ class MessageAdmin(admin.ModelAdmin):
         "created_by_name",
         "created_at",
     )
-    list_filter = ("sent",)
+    list_filter = ("sent", "created_by")
     readonly_fields = (
         "image_preview",
         "sent",
@@ -62,7 +62,8 @@ class MessageAdmin(admin.ModelAdmin):
 
     @admin.display(description="Title")
     def display_title_col(self, obj):
-        return obj.display_title
+        title = obj.display_title
+        return title[:60] + "..." if len(title) > 60 else title
 
     @admin.display(description="Body")
     def body_preview(self, obj):
