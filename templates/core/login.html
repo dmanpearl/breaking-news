@@ -33,5 +33,15 @@
   </div>
 </div>
 <script src="{% static 'js/app.js' %}"></script>
+<script>
+  // Reload the login page when the browser tab becomes visible again after
+  // being hidden (sleep, tab switch, etc.). This ensures the CSRF token in
+  // the form is always fresh and never stale from a previous session.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+      window.location.reload();
+    }
+  });
+</script>
 </body>
 </html>

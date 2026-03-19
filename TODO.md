@@ -47,12 +47,12 @@
 - [x] API Usage Log: Change 'Back to app' and 'Refresh' button to icons like in the History list
 - [x] When one browser detects a deleted message, flash it in red and pulse the indicator red.
 - [x] History Select and Scoll bug. Scroll position must stay locked on selected row during clicking and arrow navigation.
+- [x] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
+      I had the error on the login page because when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue
+      Refreshed and help I had to go to a different URL I had to go to the breakingnewsguys/messages page instead of the login breaking news page
 
 ## Open Items
 
-- [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
-      I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue
-      Refreshed and help I had to go to a different URL I had to go to the Messages breaking news page instead of the login breaking news page
 - [ ] Implement Usage Log for Users similar to the existing API Usage Log
 - [ ] Admin panel delete messages bulk one of the confirmation buttons is truncated (bottom half cut off)
 - [ ] Support multiple send groups (for developers and differing client types)

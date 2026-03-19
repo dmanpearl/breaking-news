@@ -141,6 +141,12 @@ PHONENUMBER_DEFAULT_REGION = "US"
 # an empty list, which causes Django to reject any POST (including login) from a
 # custom domain. The if-not-DEBUG block below ensures the production domains are
 # always trusted even if the env var is missing or misconfigured.
+
+# Keep the CSRF cookie alive for a full year so it outlasts any sleep/wake
+# cycle. The session itself is set to 2 weeks (rolling on activity).
+CSRF_COOKIE_AGE = 60 * 60 * 24 * 365  # 1 year in seconds
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 2 weeks in seconds
+SESSION_SAVE_EVERY_REQUEST = True  # slide the expiry on each request
 _csrf_env = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 CSRF_TRUSTED_ORIGINS = _csrf_env if _csrf_env else []
 
