@@ -1,23 +1,65 @@
-<div class="history-list">
+<div class="history-list" id="history-list"
+     data-expand-all="{{ history_expand_all|yesno:'true,false' }}">
+
   {% for msg in history %}
-  <a href="{% url 'messaging:detail' msg.pk %}"
-     class="history-item {% if active_id == msg.pk %}active{% endif %}">
-    <div class="history-headline">{{ msg.display_title }}</div>
-    <div class="history-meta">
-      {{ msg.created_at|date:"M j, Y g:i a" }}
-      {% if msg.sent %}
-        <span class="history-badge sent">Sent</span>
-      {% elif msg.last_error %}
-        <span class="history-badge error">Failed</span>
-      {% else %}
-        <span class="history-badge">Draft</span>
-      {% endif %}
-      {% if msg.display_sender_short %}
-      · {{ msg.display_sender_short }}
-      {% endif %}
-    </div>
-  </a>
+  <div class="history-item {% if active_id == msg.pk %}active{% endif %}"
+       data-pk="{{ msg.pk }}">
+
+    <div class="history-row">
+
+      <a href="{% url 'messaging:detail' msg.pk %}" class="history-row-link">
+
+        <!-- Content shown only when expanded -->
+        <div class="history-expanded-content">
+          <div class="history-expand-headline">{{ msg.display_title }}</div>
+          {% if msg.headline and msg.body %}
+          <div class="history-expand-body">{{ msg.body }}</div>
+          {% endif %}
+          {% if msg.image %}
+          {% with msg.image.name|lower as fname %}
+          {% if fname|slice:"-4:" == ".pdf" %}
+          <div class="history-expand-pdf">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>{{ msg.image.name|slice:"16:" }}</span>
+          </div>
+          {% else %}
+          <div class="history-expand-image-wrap">
+            <img src="{{ msg.image.url }}" alt="Attachment" class="history-expand-image">
+          </div>
+          {% endif %}
+          {% endwith %}
+          {% endif %}
+        </div>
+
+        <!-- Collapsed title (hidden when expanded) -->
+        <div class="history-collapsed-title">{{ msg.display_title }}</div>
+
+        <!-- Meta row always at bottom -->
+        <div class="history-meta">
+          {{ msg.created_at|date:"M j, Y g:i a" }}
+          {% if msg.sent %}
+            <span class="history-badge sent">Sent</span>
+          {% elif msg.last_error %}
+            <span class="history-badge error">Failed</span>
+          {% else %}
+            <span class="history-badge">Draft</span>
+          {% endif %}
+          {% if msg.display_sender_short %}
+          · {{ msg.display_sender_short }}
+          {% endif %}
+        </div>
+
+      </a>
+
+      <button class="history-expand-btn js-expand-btn"
+              aria-label="Expand message"
+              aria-expanded="false">&#9654;</button>
+
+    </div><!-- .history-row -->
+
+  </div>
   {% empty %}
   <div style="padding:1.5rem 1rem;font-size:0.85rem;color:var(--grey);">No messages yet.</div>
   {% endfor %}
+
 </div>

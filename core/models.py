@@ -52,6 +52,10 @@ class UserPreferences(models.Model):
         default=280,
         help_text="History sidebar width in pixels (180-750).",
     )
+    history_expand_all = models.BooleanField(
+        default=False,
+        help_text="Expand all history items by default.",
+    )
 
     class Meta:
         verbose_name = "User Preferences"

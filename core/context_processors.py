@@ -10,9 +10,12 @@ def site_settings(request):
     warn_after_ms = timeout_ms - warning_ms
 
     sidebar_width = _SIDEBAR_DEFAULT
+    history_expand_all = False
     if request.user.is_authenticated:
         try:
-            sidebar_width = request.user.preferences.sidebar_width
+            prefs = request.user.preferences
+            sidebar_width = prefs.sidebar_width
+            history_expand_all = prefs.history_expand_all
         except UserPreferences.DoesNotExist:
             pass
 
@@ -22,4 +25,5 @@ def site_settings(request):
         "inactivity_warn_after_ms": warn_after_ms,
         "inactivity_warning_ms": warning_ms,
         "sidebar_width": sidebar_width,
+        "history_expand_all": history_expand_all,
     }

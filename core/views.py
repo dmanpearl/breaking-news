@@ -53,7 +53,6 @@ def save_sidebar_width(request):
     except (TypeError, ValueError):
         return JsonResponse({"error": "invalid width"}, status=400)
 
-    # Clamp to allowed range -- JS also enforces this, but defend server-side.
     width = max(_SIDEBAR_MIN, min(_SIDEBAR_MAX, width))
 
     prefs = UserPreferences.for_user(request.user)
@@ -64,11 +63,25 @@ def save_sidebar_width(request):
 
 @login_required
 @require_POST
+def save_history_expand_all(request):
+    """Save the user's expand-all preference for the history panel."""
+    from .models import UserPreferences
+
+    value = request.POST.get("value", "false").lower() == "true"
+    prefs = UserPreferences.for_user(request.user)
+    prefs.history_expand_all = value
+    prefs.save(update_fields=["history_expand_all"])
+    return JsonResponse({"value": value})
+
+
+@login_required
+@require_POST
 def reset_preferences(request):
     """Reset all user preferences to defaults."""
     from .models import UserPreferences
 
     prefs = UserPreferences.for_user(request.user)
     prefs.sidebar_width = _SIDEBAR_DEFAULT
-    prefs.save(update_fields=["sidebar_width"])
+    prefs.history_expand_all = False
+    prefs.save(update_fields=["sidebar_width", "history_expand_all"])
     return redirect(request.POST.get("next", "messaging:index"))

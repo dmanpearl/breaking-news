@@ -175,21 +175,99 @@ a:hover { text-decoration: underline; }
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem 0;
+  /* Thin indicator-only scrollbar -- does not obscure content */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
+.history-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* ── History row color scale ──
+   1. Odd row default:      #f5f0e8  (--paper)
+   2. Even row default:     #f0ebe0  (slightly darker)
+   3. Hover (non-selected): #e8e3d8
+   4. Selected:             #ddd8cc
+   5. Hover on selected:    #d5d0c4
+   All warm cream tones, each step ~6-7 units darker.
+   Text is #0d0d0d -- contrast well above 4.5:1 on all backgrounds.
+*/
 .history-item {
-  display: block;
-  padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.1s;
   position: relative;
+  background: #f5f0e8;
 }
-.history-item:hover { background: var(--paper); }
-.history-item.active { background: var(--paper); border-left: 3px solid var(--red); }
 
-.history-headline {
-  font-weight: 600;
+.history-item:nth-child(even) {
+  background: #f0ebe0;
+}
+
+/* Selected -- inset box-shadow draws the red bar without shifting content */
+.history-item.active {
+  background: #ddd8cc;
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.history-row {
+  display: flex;
+  align-items: stretch;
+}
+
+/* Hover on non-selected row */
+.history-item:not(.active):hover {
+  background: #e8e3d8;
+}
+
+/* Hover on selected row */
+.history-item.active:hover {
+  background: #d5d0c4;
+}
+
+.history-row-link {
+  flex: 1;
+  display: block;
+  padding: 0.65rem 0 0.65rem 1rem;
+  min-width: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.history-row-link:hover {
+  text-decoration: none;
+}
+
+.history-expand-btn {
+  flex-shrink: 0;
+  width: 2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey);
+  font-size: 0.6rem;
+  line-height: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0.75rem;
+  transition: color 0.1s;
+}
+.history-expand-btn:hover {
+  color: var(--ink);
+}
+
+/* Collapsed title -- hidden when expanded */
+.history-collapsed-title {
+  font-weight: 400;
   font-size: 0.88rem;
   line-height: 1.3;
   margin-bottom: 0.15rem;
@@ -198,10 +276,91 @@ a:hover { text-decoration: underline; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Expanded content -- hidden by default, shown via .is-expanded */
+.history-expanded-content {
+  display: none;
+}
+
+.history-item.is-expanded .history-expanded-content {
+  display: block;
+}
+
+.history-item.is-expanded .history-collapsed-title {
+  display: none;
+}
+
+.history-expand-headline {
+  font-weight: 400;
+  font-size: 0.88rem;
+  line-height: 1.3;
+  margin-bottom: 0.15rem;
+  color: var(--ink);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.history-expand-body {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 0.45rem;
+}
+
+.history-expand-image-wrap {
+  overflow: hidden;
+  max-height: 120px;
+}
+
+.history-expand-image {
+  display: block;
+  max-height: 120px;
+  height: auto;
+  width: auto;
+  max-width: none;
+  object-fit: none;
+  object-position: top left;
+}
+
+.history-expand-pdf {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--grey);
+}
+
+.history-expand-pdf a {
+  color: var(--action);
+}
+
 .history-meta {
   font-family: var(--mono);
   font-size: 0.65rem;
   color: var(--grey);
+}
+
+/* Expand All checkbox in sidebar header */
+.expand-all-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--grey);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.expand-all-checkbox {
+  accent-color: var(--action);
+  cursor: pointer;
 }
 .history-badge {
   display: inline-block;

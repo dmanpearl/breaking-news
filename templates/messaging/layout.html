@@ -15,13 +15,16 @@
 
       <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
 
-      <!-- Tools dropdown -->
+      <!-- Tools dropdown -- only shown when at least one item is accessible -->
+      {% if user_is_staff or user_is_api_consumer %}
       <div class="acct-menu" id="tools-menu">
         <button class="acct-trigger" id="tools-trigger" aria-haspopup="true" aria-expanded="false">
           Tools &#9660;
         </button>
         <div class="acct-dropdown" id="tools-dropdown" role="menu">
+          {% if user_is_staff %}
           <a href="{% url 'admin:index' %}" class="acct-item" role="menuitem">System Admin</a>
+          {% endif %}
           {% if user_is_api_consumer %}
           <a href="/api/v1/docs" target="_blank" rel="noopener" class="acct-item" role="menuitem">API Docs</a>
           {% endif %}
@@ -30,6 +33,7 @@
           {% endif %}
         </div>
       </div>
+      {% endif %}
 
       <!-- Account dropdown -->
       <div class="acct-menu" id="acct-menu">
@@ -53,6 +57,11 @@
   <aside class="app-sidebar">
     <div class="sidebar-header">
       <h2>History</h2>
+      <label class="expand-all-label" title="Expand all messages">
+        <input type="checkbox" id="expand-all-checkbox" class="expand-all-checkbox"
+               {% if history_expand_all %}checked{% endif %}>
+        Expand All
+      </label>
       {% if user_is_editor %}
       <a href="{% url 'messaging:create' %}" class="btn-create">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 1v10M1 6h10"/></svg>
@@ -219,13 +228,142 @@
     }
   });
 
-  // ── History panel arrow-key navigation ───────────────────────────────
-  // Up/Down arrows move between messages when focus is not inside a text
-  // input or textarea.
+
+  // -- History expand/collapse ------------------------------------------
+  // Expand state per item lives in localStorage keyed by message pk.
+  // Survives navigation without a server round-trip.
+  // Expand All is a saved server preference that overrides individual state.
+
+  var LS_PREFIX = 'bn_expand_';
+  var expandAllCheckbox = document.getElementById('expand-all-checkbox');
+  var historyList = document.getElementById('history-list');
+  var expandAllActive = historyList &&
+    historyList.getAttribute('data-expand-all') === 'true';
+
+  function setExpanded(item, expanded) {
+    var pk = item.getAttribute('data-pk');
+    var btn = item.querySelector('.js-expand-btn');
+    item.classList.toggle('is-expanded', expanded);
+    if (btn) {
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      btn.innerHTML = expanded ? '&#9660;' : '&#9654;';
+    }
+    if (expanded) {
+      localStorage.setItem(LS_PREFIX + pk, '1');
+    } else {
+      localStorage.removeItem(LS_PREFIX + pk);
+    }
+  }
+
+  function applyExpandAll(active) {
+    expandAllActive = active;
+    var list = document.getElementById('history-list');
+
+    // Find the anchor item -- the active (selected) item if visible, otherwise
+    // the topmost item whose top edge is at or below the current scroll position.
+    var anchorItem = null;
+    var anchorOffset = 0;
+    if (list) {
+      var scrollTop = list.scrollTop;
+      var listRect = list.getBoundingClientRect();
+      // Prefer the active item if it is currently visible.
+      var activeItem = list.querySelector('.history-item.active');
+      if (activeItem) {
+        var ar = activeItem.getBoundingClientRect();
+        if (ar.top >= listRect.top && ar.top <= listRect.bottom) {
+          anchorItem = activeItem;
+        }
+      }
+      // Fall back to topmost visible item.
+      if (!anchorItem) {
+        var items = list.querySelectorAll('.history-item');
+        for (var i = 0; i < items.length; i++) {
+          var ir = items[i].getBoundingClientRect();
+          if (ir.bottom > listRect.top) {
+            anchorItem = items[i];
+            break;
+          }
+        }
+      }
+      if (anchorItem) {
+        // Distance from the list's current scroll top to the anchor item's top.
+        anchorOffset = anchorItem.offsetTop - scrollTop;
+      }
+    }
+
+    // Apply the expand/collapse state to all items.
+    document.querySelectorAll('.history-item').forEach(function (item) {
+      var btn = item.querySelector('.js-expand-btn');
+      if (active) {
+        item.classList.add('is-expanded');
+        if (btn) btn.style.display = 'none';
+      } else {
+        if (btn) btn.style.display = '';
+        var pk = item.getAttribute('data-pk');
+        var indiv = localStorage.getItem(LS_PREFIX + pk) === '1';
+        item.classList.toggle('is-expanded', indiv);
+        if (btn) {
+          btn.setAttribute('aria-expanded', indiv ? 'true' : 'false');
+          btn.innerHTML = indiv ? '&#9660;' : '&#9654;';
+        }
+      }
+    });
+
+    // Restore scroll position so the anchor item stays at the same visual
+    // position within the list after the DOM heights change.
+    if (list && anchorItem) {
+      list.scrollTop = anchorItem.offsetTop - anchorOffset;
+    }
+  }
+
+  // Apply saved states on page load.
+  (function () {
+    document.querySelectorAll('.history-item').forEach(function (item) {
+      var pk = item.getAttribute('data-pk');
+      var btn = item.querySelector('.js-expand-btn');
+      if (expandAllActive) {
+        item.classList.add('is-expanded');
+        if (btn) btn.style.display = 'none';
+      } else if (localStorage.getItem(LS_PREFIX + pk) === '1') {
+        item.classList.add('is-expanded');
+        if (btn) {
+          btn.setAttribute('aria-expanded', 'true');
+          btn.innerHTML = '&#9660;';
+        }
+      }
+    });
+  })();
+
+  // Individual expand button clicks.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-expand-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var item = btn.closest('.history-item');
+    if (!item) return;
+    setExpanded(item, !item.classList.contains('is-expanded'));
+  });
+
+  // Expand All checkbox.
+  if (expandAllCheckbox) {
+    expandAllCheckbox.addEventListener('change', function () {
+      var checked = expandAllCheckbox.checked;
+      applyExpandAll(checked);
+      var fd = new FormData();
+      fd.append('value', checked ? 'true' : 'false');
+      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fetch('{% url "core:save_history_expand_all" %}', {
+        method: 'POST',
+        body: fd,
+      });
+    });
+  }
+
+  // -- History panel arrow-key navigation --------------------------------
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
-    // Don't hijack arrow keys while the user is typing.
     var tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
@@ -243,11 +381,29 @@
       nextIdx = activeIdx < 0 ? 0 : Math.min(activeIdx + 1, items.length - 1);
     }
 
-    if (nextIdx === activeIdx) return; // already at boundary
+    if (nextIdx === activeIdx) return;
 
-    e.preventDefault(); // stop the page from scrolling
-    items[nextIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    window.location.href = items[nextIdx].href;
+    e.preventDefault();
+
+    // Scroll the history list container only when the target item would be
+    // outside the visible area. Never touch document/window scroll.
+    var target = items[nextIdx];
+    var list = target.closest('.history-list');
+    if (list) {
+      var itemTop = target.offsetTop;
+      var itemBottom = itemTop + target.offsetHeight;
+      var listTop = list.scrollTop;
+      var listBottom = listTop + list.clientHeight;
+      var pad = 8; // px -- scroll before hitting the hard edge
+      if (itemTop - pad < listTop) {
+        list.scrollTop = itemTop - pad;
+      } else if (itemBottom + pad > listBottom) {
+        list.scrollTop = itemBottom + pad - list.clientHeight;
+      }
+    }
+
+    var link = target.querySelector('.history-row-link');
+    if (link) window.location.href = link.href;
   });
 })();
 </script>
