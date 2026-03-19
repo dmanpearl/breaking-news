@@ -248,19 +248,23 @@ def history_partial(request):
 
 @login_required
 def messages_poll(request):
-    """Lightweight poll endpoint -- returns the latest message pk.
+    """Lightweight poll endpoint -- returns the latest message pk and count.
 
-    Called every 5 seconds by the message watcher JS. Returns JSON only so
+    Called every 2 seconds by the message watcher JS. Returns JSON only so
     the client can decide whether a full history refresh is needed without
     fetching any HTML.
+
+    The count allows the client to detect deletions: if it drops, the
+    history list is refreshed the same way as on a new message arrival.
     """
     from django.http import JsonResponse
 
     latest = Message.objects.only("id", "created_at").first()
+    count = Message.objects.count()
     if latest:
-        data = {"latest_id": latest.pk, "created_at": latest.created_at.isoformat()}
+        data = {"latest_id": latest.pk, "count": count, "created_at": latest.created_at.isoformat()}
     else:
-        data = {"latest_id": 0, "created_at": None}
+        data = {"latest_id": 0, "count": 0, "created_at": None}
 
     response = JsonResponse(data)
     response["Cache-Control"] = "no-store"

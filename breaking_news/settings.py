@@ -170,9 +170,26 @@ if not DEBUG:
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "suppress_poll": {
+            "()": "breaking_news.log_filters.SuppressPollFilter",
+        },
+    },
+    "formatters": {
+        "django.server": {
+            "()": "django.utils.log.ServerFormatter",
+            "format": "[{server_time}] {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+        },
+        "console_no_poll": {
+            "class": "logging.StreamHandler",
+            "filters": ["suppress_poll"],
+            "formatter": "django.server",
         },
     },
     "root": {
@@ -180,6 +197,16 @@ LOGGING = {
         "level": "WARNING",
     },
     "loggers": {
+        "uvicorn.access": {
+            "handlers": ["console_no_poll"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console_no_poll"],
+            "level": "INFO",
+            "propagate": False,
+        },
         "connections": {
             "handlers": ["console"],
             "level": "DEBUG",

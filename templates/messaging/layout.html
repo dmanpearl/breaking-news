@@ -2,7 +2,8 @@
 {% load static %}
 
 {% block body %}
-<div class="app-shell" data-sidebar-w="{{ sidebar_width }}">
+<div class="app-shell" data-sidebar-w="{{ sidebar_width }}"
+     style="--sidebar-w: {{ sidebar_width }}px;">
 
   <!-- Header -->
   <header class="app-header">
@@ -15,8 +16,8 @@
 
       <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
 
-      <!-- New message indicator -- hidden until a new message arrives -->
-      <span id="new-msg-dot" class="new-msg-dot" title="New message arrived" style="display:none;" aria-label="New message"></span>
+      <!-- New message indicator -- always present, opacity controls visibility -->
+      <span id="new-msg-dot" class="new-msg-dot" aria-label="New message arrived"></span>
 
       <!-- Tools dropdown -- only shown when at least one item is accessible -->
       {% if user_is_staff or user_is_api_consumer %}
@@ -65,12 +66,22 @@
                {% if history_expand_all %}checked{% endif %}>
         Expand All
       </label>
-      {% if user_is_editor %}
-      <a href="{% url 'messaging:create' %}" class="btn-create">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 1v10M1 6h10"/></svg>
-        New
-      </a>
-      {% endif %}
+      <div class="sidebar-header-actions">
+        {% if user_is_editor %}
+        <button id="history-new-btn" class="sidebar-icon-btn" title="New message"
+                onclick="window.location.href='{% url 'messaging:create' %}'">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M7 1v12M1 7h12"/>
+          </svg>
+        </button>
+        {% endif %}
+        <button id="history-refresh-btn" class="sidebar-icon-btn" title="Refresh history">
+          <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 9A7 7 0 1 1 9.5 2.1"/>
+            <polyline points="9.5 0 9.5 4 13.5 4"/>
+          </svg>
+        </button>
+      </div>
     </div>
     {% block sidebar_content %}{% endblock %}
     <!-- Drag handle on the right edge of the sidebar -->
@@ -99,6 +110,7 @@
 {% block extra_js %}
 <script>
 (function () {
+
   // ── Auto-dismiss success flashes after 750ms ──────────────────────────
   var successes = document.querySelectorAll('.flash.success');
   if (successes.length) {
@@ -111,81 +123,70 @@
 
   // ── Sidebar resize ────────────────────────────────────────────────────
   var shell = document.querySelector('.app-shell');
-  var savedW = shell && parseInt(shell.getAttribute('data-sidebar-w'), 10);
   var SIDEBAR_MIN = 180;
   var SIDEBAR_MAX = 750;
   var SIDEBAR_DEFAULT = 280;
-  // Minimum pixels to leave for the main content panel so the Send/Save/
-  // Cancel buttons are never squished.
   var MAIN_MIN = 400;
 
   function clamp(v) {
-    // 75% of viewport, but also never shrink the main panel below MAIN_MIN.
     var byPercent = Math.floor(window.innerWidth * 0.75);
     var byMainMin = window.innerWidth - MAIN_MIN;
     var ceiling = Math.min(SIDEBAR_MAX, byPercent, byMainMin);
     return Math.max(SIDEBAR_MIN, Math.min(ceiling, v));
   }
 
-  // On mobile (<=700px) the CSS media query overrides the grid to 1fr.
   function isMobile() {
     return window.innerWidth <= 700;
   }
 
-  if (savedW && !isMobile()) {
-    shell.style.setProperty('--sidebar-w', clamp(savedW) + 'px');
-  }
+  // The inline style on .app-shell already sets --sidebar-w from the
+  // server-rendered value, so no flash. This block only handles drag
+  // and window-resize clamping.
 
   var handle = document.getElementById('sidebar-drag-handle');
-  if (!handle) return;
+  if (handle) {
+    var dragging = false;
+    var saveTimer = null;
 
-  var dragging = false;
-  var saveTimer = null;
+    handle.addEventListener('mousedown', function (e) {
+      if (isMobile()) return;
+      e.preventDefault();
+      dragging = true;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
 
-  handle.addEventListener('mousedown', function (e) {
-    if (isMobile()) return;
-    e.preventDefault();
-    dragging = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      var newW = clamp(e.clientX);
+      shell.style.setProperty('--sidebar-w', newW + 'px');
+    });
 
-  document.addEventListener('mousemove', function (e) {
-    if (!dragging) return;
-    var newW = clamp(e.clientX);
-    shell.style.setProperty('--sidebar-w', newW + 'px');
-  });
+    document.addEventListener('mouseup', function () {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
 
-  document.addEventListener('mouseup', function () {
-    if (!dragging) return;
-    dragging = false;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        var current = parseInt(shell.style.getPropertyValue('--sidebar-w'), 10);
+        if (!current || isNaN(current)) return;
+        current = clamp(current);
+        var fd = new FormData();
+        fd.append('width', current);
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        fetch('{% url "core:save_sidebar_width" %}', { method: 'POST', body: fd });
+      }, 300);
+    });
 
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      var current = parseInt(
-        shell.style.getPropertyValue('--sidebar-w'), 10
-      );
+    window.addEventListener('resize', function () {
+      if (isMobile()) return;
+      var current = parseInt(shell.style.getPropertyValue('--sidebar-w'), 10);
       if (!current || isNaN(current)) return;
-      current = clamp(current);
-
-      var fd = new FormData();
-      fd.append('width', current);
-      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-      fetch('{% url "core:save_sidebar_width" %}', {
-        method: 'POST',
-        body: fd,
-      });
-    }, 300);
-  });
-
-  window.addEventListener('resize', function () {
-    if (isMobile()) return;
-    var current = parseInt(shell.style.getPropertyValue('--sidebar-w'), 10);
-    if (!current || isNaN(current)) return;
-    shell.style.setProperty('--sidebar-w', clamp(current) + 'px');
-  });
+      shell.style.setProperty('--sidebar-w', clamp(current) + 'px');
+    });
+  }
 
   // ── Dropdown helper ───────────────────────────────────────────────────
   function initDropdown(triggerId, dropdownId, menuId) {
@@ -196,7 +197,6 @@
 
     trigger.addEventListener('click', function (e) {
       e.stopPropagation();
-      // Close any other open dropdowns first.
       document.querySelectorAll('.acct-dropdown.open').forEach(function (d) {
         if (d !== dropdown) {
           d.classList.remove('open');
@@ -231,12 +231,7 @@
     }
   });
 
-
-  // -- History expand/collapse ------------------------------------------
-  // Expand state per item lives in localStorage keyed by message pk.
-  // Survives navigation without a server round-trip.
-  // Expand All is a saved server preference that overrides individual state.
-
+  // ── History expand/collapse ───────────────────────────────────────────
   var LS_PREFIX = 'bn_expand_';
   var expandAllCheckbox = document.getElementById('expand-all-checkbox');
   var historyList = document.getElementById('history-list');
@@ -262,14 +257,11 @@
     expandAllActive = active;
     var list = document.getElementById('history-list');
 
-    // Find the anchor item -- the active (selected) item if visible, otherwise
-    // the topmost item whose top edge is at or below the current scroll position.
     var anchorItem = null;
     var anchorOffset = 0;
     if (list) {
       var scrollTop = list.scrollTop;
       var listRect = list.getBoundingClientRect();
-      // Prefer the active item if it is currently visible.
       var activeItem = list.querySelector('.history-item.active');
       if (activeItem) {
         var ar = activeItem.getBoundingClientRect();
@@ -277,7 +269,6 @@
           anchorItem = activeItem;
         }
       }
-      // Fall back to topmost visible item.
       if (!anchorItem) {
         var items = list.querySelectorAll('.history-item');
         for (var i = 0; i < items.length; i++) {
@@ -289,12 +280,10 @@
         }
       }
       if (anchorItem) {
-        // Distance from the list's current scroll top to the anchor item's top.
         anchorOffset = anchorItem.offsetTop - scrollTop;
       }
     }
 
-    // Apply the expand/collapse state to all items.
     document.querySelectorAll('.history-item').forEach(function (item) {
       var btn = item.querySelector('.js-expand-btn');
       if (active) {
@@ -312,29 +301,35 @@
       }
     });
 
-    // Restore scroll position so the anchor item stays at the same visual
-    // position within the list after the DOM heights change.
     if (list && anchorItem) {
       list.scrollTop = anchorItem.offsetTop - anchorOffset;
     }
   }
 
-  // Apply saved states on page load.
-  (function () {
-    document.querySelectorAll('.history-item').forEach(function (item) {
+  function reapplyExpandStates(list) {
+    var allActive = list.getAttribute('data-expand-all') === 'true';
+    list.querySelectorAll('.history-item').forEach(function (item) {
       var pk = item.getAttribute('data-pk');
       var btn = item.querySelector('.js-expand-btn');
-      if (expandAllActive) {
+      if (allActive) {
         item.classList.add('is-expanded');
         if (btn) btn.style.display = 'none';
-      } else if (localStorage.getItem(LS_PREFIX + pk) === '1') {
-        item.classList.add('is-expanded');
+      } else {
+        var indiv = localStorage.getItem(LS_PREFIX + pk) === '1';
+        item.classList.toggle('is-expanded', indiv);
         if (btn) {
-          btn.setAttribute('aria-expanded', 'true');
-          btn.innerHTML = '&#9660;';
+          btn.setAttribute('aria-expanded', indiv ? 'true' : 'false');
+          btn.innerHTML = indiv ? '&#9660;' : '&#9654;';
         }
       }
     });
+  }
+
+  // Apply saved states on page load.
+  (function () {
+    var list = document.getElementById('history-list');
+    if (!list) return;
+    reapplyExpandStates(list);
   })();
 
   // Individual expand button clicks.
@@ -356,14 +351,11 @@
       var fd = new FormData();
       fd.append('value', checked ? 'true' : 'false');
       fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-      fetch('{% url "core:save_history_expand_all" %}', {
-        method: 'POST',
-        body: fd,
-      });
+      fetch('{% url "core:save_history_expand_all" %}', { method: 'POST', body: fd });
     });
   }
 
-  // -- History panel arrow-key navigation --------------------------------
+  // ── History panel arrow-key navigation ───────────────────────────────
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
@@ -388,8 +380,6 @@
 
     e.preventDefault();
 
-    // Scroll the history list container only when the target item would be
-    // outside the visible area. Never touch document/window scroll.
     var target = items[nextIdx];
     var list = target.closest('.history-list');
     if (list) {
@@ -397,7 +387,7 @@
       var itemBottom = itemTop + target.offsetHeight;
       var listTop = list.scrollTop;
       var listBottom = listTop + list.clientHeight;
-      var pad = 8; // px -- scroll before hitting the hard edge
+      var pad = 8;
       if (itemTop - pad < listTop) {
         list.scrollTop = itemTop - pad;
       } else if (itemBottom + pad > listBottom) {
@@ -408,23 +398,14 @@
     var link = target.querySelector('.history-row-link');
     if (link) window.location.href = link.href;
   });
-})();
-</script>
-{% endblock %}
 
-<script>
-// ── Message watcher ───────────────────────────────────────────────────────
-// Polls /messages/poll/ every 5 seconds. When a new message is detected,
-// fetches the full history partial and swaps it in, preserving scroll
-// position and expand states. New items get a green pulse highlight.
-// A navbar dot pulses to signal arrival even when the new item is off-screen.
-(function () {
-  var POLL_MS = 5000;
+  // ── History watcher + manual refresh ─────────────────────────────────
+  var POLL_MS = 2000;
   var POLL_URL = '{% url "messaging:poll" %}';
   var HISTORY_URL = '{% url "messaging:history" %}';
+  var dot = document.getElementById('new-msg-dot');
+  var refreshBtn = document.getElementById('history-refresh-btn');
 
-  // Seed the known-latest-id from the current DOM so the first poll never
-  // false-triggers on our own messages.
   function getMaxIdFromDom() {
     var items = document.querySelectorAll('.history-item[data-pk]');
     var max = 0;
@@ -436,75 +417,46 @@
   }
 
   var knownLatestId = getMaxIdFromDom();
-  var dot = document.getElementById('new-msg-dot');
 
   function showDot() {
     if (!dot) return;
-    dot.style.display = 'inline-block';
+    dot.classList.add('new-msg-dot--active');
     dot.classList.remove('new-msg-dot--pulse');
-    // Force reflow to restart animation.
     void dot.offsetWidth;
     dot.classList.add('new-msg-dot--pulse');
   }
 
   function hideDot() {
     if (!dot) return;
-    dot.style.display = 'none';
+    dot.classList.remove('new-msg-dot--active');
     dot.classList.remove('new-msg-dot--pulse');
   }
 
-  function reapplyExpandStates(list) {
-    var expandAllActive = list.getAttribute('data-expand-all') === 'true';
-    list.querySelectorAll('.history-item').forEach(function (item) {
-      var pk = item.getAttribute('data-pk');
-      var btn = item.querySelector('.js-expand-btn');
-      if (expandAllActive) {
-        item.classList.add('is-expanded');
-        if (btn) btn.style.display = 'none';
-      } else {
-        var indiv = localStorage.getItem('bn_expand_' + pk) === '1';
-        item.classList.toggle('is-expanded', indiv);
-        if (btn) {
-          btn.setAttribute('aria-expanded', indiv ? 'true' : 'false');
-          btn.innerHTML = indiv ? '&#9660;' : '&#9654;';
-        }
+  function highlightNewItems(list, prevKnownId) {
+    list.querySelectorAll('.history-item[data-pk]').forEach(function (el) {
+      if (parseInt(el.getAttribute('data-pk'), 10) > prevKnownId) {
+        el.classList.add('history-item--new');
+        setTimeout(function () { el.classList.remove('history-item--new'); }, 1400);
       }
     });
   }
 
-  function highlightNewItems(list, newIds) {
-    newIds.forEach(function (pk) {
-      var item = list.querySelector('.history-item[data-pk="' + pk + '"]');
-      if (!item) return;
-      item.classList.add('history-item--new');
-      // Remove after animation completes so the class can re-trigger.
-      setTimeout(function () {
-        item.classList.remove('history-item--new');
-      }, 1400);
-    });
+  function setRefreshSpinning(spinning) {
+    if (!refreshBtn) return;
+    if (spinning) {
+      refreshBtn.classList.add('spinning');
+      refreshBtn.disabled = true;
+    } else {
+      refreshBtn.classList.remove('spinning');
+      refreshBtn.disabled = false;
+    }
   }
 
-  function poll() {
-    fetch(POLL_URL, { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var latestId = data.latest_id || 0;
-        if (latestId > knownLatestId) {
-          var prevKnown = knownLatestId;
-          knownLatestId = latestId;
-          showDot();
-          swapHistoryWithRange(prevKnown);
-        }
-      })
-      .catch(function () {});
-  }
-
-  function swapHistoryWithRange(prevKnownId) {
+  function swapHistoryList(prevKnownId, highlightNew) {
     var oldList = document.getElementById('history-list');
     if (!oldList) return;
 
     var savedScroll = oldList.scrollTop;
-    var expandAllActive = oldList.getAttribute('data-expand-all') === 'true';
 
     fetch(HISTORY_URL, { credentials: 'same-origin' })
       .then(function (r) { return r.text(); })
@@ -514,30 +466,63 @@
         var newList = doc.getElementById('history-list');
         if (!newList) return;
 
+        // Use the live JS variable -- more reliable than the DOM attribute
+        // which may reflect a stale server-rendered value.
         newList.setAttribute('data-expand-all', expandAllActive ? 'true' : 'false');
         oldList.replaceWith(newList);
         reapplyExpandStates(newList);
         newList.scrollTop = savedScroll;
 
-        // Highlight all items with pk > prevKnownId.
-        var newIds = [];
-        newList.querySelectorAll('.history-item[data-pk]').forEach(function (el) {
-          if (parseInt(el.getAttribute('data-pk'), 10) > prevKnownId) {
-            newIds.push(el.getAttribute('data-pk'));
-          }
-        });
-        highlightNewItems(newList, newIds);
+        if (highlightNew) {
+          highlightNewItems(newList, prevKnownId);
+        }
+        // Delay dot dismissal so it stays visible long enough to be noticed.
+        setTimeout(hideDot, 1000);
         knownLatestId = getMaxIdFromDom();
+        knownCount = newList.querySelectorAll('.history-item[data-pk]').length;
+        setRefreshSpinning(false);
+      })
+      .catch(function () { setRefreshSpinning(false); });
+  }
+
+  var knownCount = document.querySelectorAll('.history-item[data-pk]').length;
+
+  function poll() {
+    fetch(POLL_URL, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var latestId = data.latest_id || 0;
+        var serverCount = data.count || 0;
+
+        if (latestId > knownLatestId) {
+          // New message arrived.
+          var prevKnown = knownLatestId;
+          knownLatestId = latestId;
+          knownCount = serverCount;
+          showDot();
+          swapHistoryList(prevKnown, true);
+        } else if (serverCount < knownCount) {
+          // Message was deleted by another user -- refresh silently.
+          knownCount = serverCount;
+          swapHistoryList(knownLatestId, false);
+        } else {
+          knownCount = serverCount;
+        }
       })
       .catch(function () {});
   }
 
-  // Clicking the dot hides it.
-  if (dot) {
-    dot.addEventListener('click', function () { hideDot(); });
+  // Manual refresh button.
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function () {
+      setRefreshSpinning(true);
+      var prev = knownLatestId;
+      swapHistoryList(prev, false);
+    });
   }
 
-  // Start polling.
   setInterval(poll, POLL_MS);
+
 })();
 </script>
+{% endblock %}

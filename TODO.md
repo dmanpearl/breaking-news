@@ -45,6 +45,7 @@
 
 ## Open Items
 
+- [ ] When one browser detects a deleted message, flash it in red and pulse the indicator red.
 - [ ] History Select and Scoll bug. Scroll position must stay locked on selected row during clicking and arrow navigation.
 - [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue

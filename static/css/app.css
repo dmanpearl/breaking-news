@@ -143,6 +143,7 @@ a:hover { text-decoration: underline; }
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--paper);
+  gap: 0.5rem;
 }
 
 .sidebar-header h2 {
@@ -151,25 +152,48 @@ a:hover { text-decoration: underline; }
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--grey);
+  flex: 1;
 }
 
-.btn-create {
-  display: inline-flex;
+.sidebar-header-actions {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
-  background: var(--action);
-  color: #fff;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* Frameless icon buttons in the sidebar header */
+.sidebar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
   border: none;
   cursor: pointer;
+  color: var(--grey);
   border-radius: var(--radius);
-  transition: background 0.15s;
+  padding: 0;
+  transition: color 0.1s, background 0.1s;
 }
-.btn-create:hover { background: var(--action-dark); color: #fff; text-decoration: none; }
+.sidebar-icon-btn:hover {
+  color: var(--ink);
+  background: var(--paper-dark);
+}
+.sidebar-icon-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Spinner animation for the refresh button */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.sidebar-icon-btn.spinning svg {
+  animation: spin 0.7s linear infinite;
+}
 
 .history-list {
   flex: 1;
@@ -802,16 +826,22 @@ a:hover { text-decoration: underline; }
 .acct-item:hover { background: #222; color: #fff; text-decoration: none; }
 
 /* ── New message indicator dot ── */
+/* Always occupies space in the nav so surrounding elements never shift.
+   Invisible at rest -- lit when new messages arrive. */
 .new-msg-dot {
   display: inline-block;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: #2ecc71;
-  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.4);
-  cursor: pointer;
-  vertical-align: middle;
   flex-shrink: 0;
+  vertical-align: middle;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.new-msg-dot--active {
+  opacity: 1;
 }
 
 @keyframes dot-pulse {
@@ -821,7 +851,7 @@ a:hover { text-decoration: underline; }
 }
 
 .new-msg-dot--pulse {
-  animation: dot-pulse 0.9s ease-out infinite;
+  animation: dot-pulse 1.0s ease-out infinite;
 }
 
 /* ── History new-message highlight ── */
