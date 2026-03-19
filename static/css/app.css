@@ -45,6 +45,10 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
+.app-shell--no-sidebar {
+  grid-template-columns: 1fr;
+}
+
 /* ── Header ── */
 .app-header {
   grid-column: 1 / -1;
@@ -191,7 +195,8 @@ a:hover { text-decoration: underline; }
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-.sidebar-icon-btn.spinning svg {
+.sidebar-icon-btn.spinning span {
+  display: inline-block;
   animation: spin 0.7s linear infinite;
 }
 
@@ -844,14 +849,39 @@ a:hover { text-decoration: underline; }
   opacity: 1;
 }
 
+.new-msg-dot--red {
+  background: var(--red);
+}
+
 @keyframes dot-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
   50%  { box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); }
   100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
 }
 
+.new-msg-dot--red.new-msg-dot--pulse {
+  animation: dot-pulse-red 1.0s ease-out infinite;
+}
+
 .new-msg-dot--pulse {
   animation: dot-pulse 1.0s ease-out infinite;
+}
+
+@keyframes dot-pulse-red {
+  0%   { box-shadow: 0 0 0 0 rgba(181, 48, 58, 0.7); }
+  50%  { box-shadow: 0 0 0 6px rgba(181, 48, 58, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(181, 48, 58, 0); }
+}
+
+/* ── History deleted-item flash ── */
+@keyframes history-deleted-flash {
+  0%   { background: #f8d7da; }
+  60%  { background: #f8d7da; }
+  100% { background: inherit; }
+}
+
+.history-item--deleted {
+  animation: history-deleted-flash 0.75s ease-out forwards;
 }
 
 /* ── History new-message highlight ── */

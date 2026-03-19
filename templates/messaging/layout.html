@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block body %}
-<div class="app-shell" data-sidebar-w="{{ sidebar_width }}"
+<div class="app-shell {% block shell_class %}{% endblock %}" data-sidebar-w="{{ sidebar_width }}"
      style="--sidebar-w: {{ sidebar_width }}px;">
 
   <!-- Header -->
@@ -57,6 +57,7 @@
     </nav>
   </header>
 
+  {% block sidebar %}
   <!-- Sidebar / History -->
   <aside class="app-sidebar">
     <div class="sidebar-header">
@@ -76,10 +77,7 @@
         </button>
         {% endif %}
         <button id="history-refresh-btn" class="sidebar-icon-btn" title="Refresh history">
-          <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 9A7 7 0 1 1 9.5 2.1"/>
-            <polyline points="9.5 0 9.5 4 13.5 4"/>
-          </svg>
+          <span style="font-size:1rem;line-height:1;">&#8635;</span>
         </button>
       </div>
     </div>
@@ -87,6 +85,7 @@
     <!-- Drag handle on the right edge of the sidebar -->
     <div class="sidebar-drag-handle" id="sidebar-drag-handle" title="Drag to resize"></div>
   </aside>
+  {% endblock sidebar %}
 
   <!-- Main -->
   <main class="app-main">
@@ -110,6 +109,27 @@
 {% block extra_js %}
 <script>
 (function () {
+
+  // ── Localize UTC timestamps to browser local time ─────────────────────
+  function localizeTimestamps(root) {
+    var els = (root || document).querySelectorAll('.local-time[data-utc]');
+    els.forEach(function (el) {
+      var utc = el.getAttribute('data-utc');
+      if (!utc) return;
+      try {
+        var d = new Date(utc);
+        el.textContent = d.toLocaleString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      } catch (e) {}
+    });
+  }
+
+  localizeTimestamps();
 
   // ── Auto-dismiss success flashes after 750ms ──────────────────────────
   var successes = document.querySelectorAll('.flash.success');
@@ -420,7 +440,16 @@
 
   function showDot() {
     if (!dot) return;
+    dot.classList.remove('new-msg-dot--red');
     dot.classList.add('new-msg-dot--active');
+    dot.classList.remove('new-msg-dot--pulse');
+    void dot.offsetWidth;
+    dot.classList.add('new-msg-dot--pulse');
+  }
+
+  function showDotRed() {
+    if (!dot) return;
+    dot.classList.add('new-msg-dot--active', 'new-msg-dot--red');
     dot.classList.remove('new-msg-dot--pulse');
     void dot.offsetWidth;
     dot.classList.add('new-msg-dot--pulse');
@@ -428,8 +457,63 @@
 
   function hideDot() {
     if (!dot) return;
-    dot.classList.remove('new-msg-dot--active');
+    dot.classList.remove('new-msg-dot--active', 'new-msg-dot--red');
     dot.classList.remove('new-msg-dot--pulse');
+  }
+
+  function flashDeletedThenSwap() {
+    // Collect pks currently visible in the DOM.
+    var currentPks = {};
+    document.querySelectorAll('.history-item[data-pk]').forEach(function (el) {
+      currentPks[el.getAttribute('data-pk')] = el;
+    });
+
+    // Fetch the new list to find which pks are gone.
+    fetch(HISTORY_URL, { credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var newList = doc.getElementById('history-list');
+        if (!newList) return;
+
+        // Build set of incoming pks.
+        var incomingPks = {};
+        newList.querySelectorAll('.history-item[data-pk]').forEach(function (el) {
+          incomingPks[el.getAttribute('data-pk')] = true;
+        });
+
+        // Flash items that are gone.
+        var deleted = [];
+        Object.keys(currentPks).forEach(function (pk) {
+          if (!incomingPks[pk]) {
+            deleted.push(currentPks[pk]);
+          }
+        });
+
+        if (deleted.length) {
+          showDotRed();
+          deleted.forEach(function (el) {
+            el.classList.add('history-item--deleted');
+          });
+        }
+
+        // After flash duration, do the actual swap.
+        setTimeout(function () {
+          var oldList = document.getElementById('history-list');
+          if (!oldList) return;
+          var savedScroll = oldList.scrollTop;
+          newList.setAttribute('data-expand-all', expandAllActive ? 'true' : 'false');
+          oldList.replaceWith(newList);
+          reapplyExpandStates(newList);
+          newList.scrollTop = savedScroll;
+          localizeTimestamps(newList);
+          knownLatestId = getMaxIdFromDom();
+          knownCount = newList.querySelectorAll('.history-item[data-pk]').length;
+          setTimeout(hideDot, 1000);
+        }, 750);
+      })
+      .catch(function () {});
   }
 
   function highlightNewItems(list, prevKnownId) {
@@ -472,6 +556,7 @@
         oldList.replaceWith(newList);
         reapplyExpandStates(newList);
         newList.scrollTop = savedScroll;
+        localizeTimestamps(newList);
 
         if (highlightNew) {
           highlightNewItems(newList, prevKnownId);
@@ -502,9 +587,10 @@
           showDot();
           swapHistoryList(prevKnown, true);
         } else if (serverCount < knownCount) {
-          // Message was deleted by another user -- refresh silently.
+          // Message was deleted by another user -- flash deleted items red
+          // for 750ms then refresh.
           knownCount = serverCount;
-          swapHistoryList(knownLatestId, false);
+          flashDeletedThenSwap();
         } else {
           knownCount = serverCount;
         }

@@ -114,7 +114,7 @@
             {% if r.success %}✓ OK{% else %}✗ Failed{% endif %}
           </td>
           <td style="font-family:var(--mono);font-size:0.72rem;">{{ r.remote_message_id|default:"—" }}</td>
-          <td style="font-family:var(--mono);font-size:0.72rem;">{{ r.sent_at|date:"M j H:i" }}</td>
+          <td style="font-family:var(--mono);font-size:0.72rem;"><span class="local-time" data-utc="{{ r.sent_at|date:'c' }}">{{ r.sent_at|date:"M j H:i" }} UTC</span></td>
           <td style="font-family:var(--mono);font-size:0.72rem;color:var(--red);">{{ r.error|default:"—" }}</td>
         </tr>
         {% endfor %}

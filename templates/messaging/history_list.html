@@ -9,11 +9,15 @@
 
       <a href="{% url 'messaging:detail' msg.pk %}" class="history-row-link">
 
-        <!-- Content shown only when expanded -->
+        <!-- Expanded content -- shown when .is-expanded on parent -->
         <div class="history-expanded-content">
-          <div class="history-expand-headline">{{ msg.display_title }}</div>
-          {% if msg.headline and msg.body %}
-          <div class="history-expand-body">{{ msg.body }}</div>
+          {% if msg.headline %}
+            <div class="history-expand-headline">{{ msg.headline }}</div>
+            {% if msg.body %}
+            <div class="history-expand-body">{{ msg.body }}</div>
+            {% endif %}
+          {% elif msg.body %}
+            <div class="history-expand-body">{{ msg.body }}</div>
           {% endif %}
           {% if msg.image %}
           {% with msg.image.name|lower as fname %}
@@ -31,12 +35,12 @@
           {% endif %}
         </div>
 
-        <!-- Collapsed title (hidden when expanded) -->
+        <!-- Collapsed title -- hidden when expanded -->
         <div class="history-collapsed-title">{{ msg.display_title }}</div>
 
         <!-- Meta row always at bottom -->
         <div class="history-meta">
-          {{ msg.created_at|date:"M j, Y g:i a" }}
+          <span class="local-time" data-utc="{{ msg.created_at|date:'c' }}">{{ msg.created_at|date:"M j, Y g:i a" }} UTC</span>
           {% if msg.sent %}
             <span class="history-badge sent">Sent</span>
           {% elif msg.last_error %}
@@ -53,7 +57,8 @@
 
       <button class="history-expand-btn js-expand-btn"
               aria-label="Expand message"
-              aria-expanded="false">&#9654;</button>
+              aria-expanded="false"
+              {% if not msg.has_expand_content %}style="visibility:hidden;"{% endif %}>&#9654;</button>
 
     </div><!-- .history-row -->
 

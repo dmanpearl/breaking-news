@@ -42,10 +42,13 @@
     3. Provide an 'Expand All' toggle that spins-opens all messages simultaneously. Setting is persistent per user.
     5. Make history pane width adjustable. Setting is persistent. Edge case caution!
 - [x] Breaking News history list auto-refreshes as new messages arrive from another node.
+- [x] Bug: Expand individual is not working for some messages
+- [x] History: Use localized timestamps (ex. Craig's messages incorrectly displays 2:42pm for message that arrived at 7:42am)
+- [x] API Usage Log: Change 'Back to app' and 'Refresh' button to icons like in the History list
+- [x] When one browser detects a deleted message, flash it in red and pulse the indicator red.
 
 ## Open Items
 
-- [ ] When one browser detects a deleted message, flash it in red and pulse the indicator red.
 - [ ] History Select and Scoll bug. Scroll position must stay locked on selected row during clicking and arrow navigation.
 - [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue

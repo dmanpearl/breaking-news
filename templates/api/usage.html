@@ -1,6 +1,9 @@
 {% extends "messaging/layout.html" %}
 {% load static %}
 
+{% block shell_class %}app-shell--no-sidebar{% endblock %}
+{% block sidebar %}{% endblock %}
+
 {% block title %}API Usage Log — Breaking News{% endblock %}
 
 {% block extra_css %}
@@ -237,8 +240,15 @@
       <p class="usage-subtitle">Successful authentications — last 120 days</p>
     </div>
     <div class="usage-title-actions">
-      <a href="{% url 'messaging:index' %}" class="btn">&#8592; Back to App</a>
-      <button onclick="window.location.reload()" class="btn btn-primary">&#8635; Refresh</button>
+      <button onclick="window.location.reload()" class="sidebar-icon-btn" title="Refresh">
+        <span style="font-size:1rem;line-height:1;">&#8635;</span>
+      </button>
+      <a href="{% url 'messaging:index' %}" class="sidebar-icon-btn" title="Back to App" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="13" y1="7" x2="1" y2="7"/>
+          <polyline points="7 1 1 7 7 13"/>
+        </svg>
+      </a>
     </div>
   </div>
 
