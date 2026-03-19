@@ -203,7 +203,7 @@ a:hover { text-decoration: underline; }
 .history-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem 0;
+  padding-bottom: 0.5rem;
   /* Thin indicator-only scrollbar -- does not obscure content */
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;

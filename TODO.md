@@ -46,10 +46,10 @@
 - [x] History: Use localized timestamps (ex. Craig's messages incorrectly displays 2:42pm for message that arrived at 7:42am)
 - [x] API Usage Log: Change 'Back to app' and 'Refresh' button to icons like in the History list
 - [x] When one browser detects a deleted message, flash it in red and pulse the indicator red.
+- [x] History Select and Scoll bug. Scroll position must stay locked on selected row during clicking and arrow navigation.
 
 ## Open Items
 
-- [ ] History Select and Scoll bug. Scroll position must stay locked on selected row during clicking and arrow navigation.
 - [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue
       Refreshed and help I had to go to a different URL I had to go to the Messages breaking news page instead of the login breaking news page

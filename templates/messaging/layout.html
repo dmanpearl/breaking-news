@@ -131,6 +131,30 @@
 
   localizeTimestamps();
 
+  // ── Preserve history list scroll position across page navigations ──────
+  // Save scrollTop to sessionStorage before leaving the page, restore on load.
+  var SCROLL_KEY = 'bn_history_scroll';
+
+  function saveScroll() {
+    var list = document.getElementById('history-list');
+    if (list) sessionStorage.setItem(SCROLL_KEY, list.scrollTop);
+  }
+
+  function restoreScroll() {
+    var saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved === null) return;
+    var list = document.getElementById('history-list');
+    if (list) list.scrollTop = parseInt(saved, 10) || 0;
+  }
+
+  // Intercept clicks on history row links to save scroll before navigation.
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest('.history-row-link');
+    if (link) saveScroll();
+  });
+
+  restoreScroll();
+
   // ── Auto-dismiss success flashes after 750ms ──────────────────────────
   var successes = document.querySelectorAll('.flash.success');
   if (successes.length) {
@@ -416,7 +440,10 @@
     }
 
     var link = target.querySelector('.history-row-link');
-    if (link) window.location.href = link.href;
+    if (link) {
+      saveScroll();
+      window.location.href = link.href;
+    }
   });
 
   // ── History watcher + manual refresh ─────────────────────────────────
