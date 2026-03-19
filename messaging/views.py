@@ -228,9 +228,43 @@ def landing(request):
 @login_required
 def history_partial(request):
     """Returns only the history list partial (for HTMX / reactive use)."""
+    from core.models import UserPreferences
+
+    history_expand_all = False
+    try:
+        history_expand_all = request.user.preferences.history_expand_all
+    except UserPreferences.DoesNotExist:
+        pass
+
     return render(
-        request, "messaging/history_list.html", {"history": Message.objects.select_related("created_by").all()}
+        request,
+        "messaging/history_list.html",
+        {
+            "history": Message.objects.select_related("created_by").all(),
+            "history_expand_all": history_expand_all,
+        },
     )
+
+
+@login_required
+def messages_poll(request):
+    """Lightweight poll endpoint -- returns the latest message pk.
+
+    Called every 5 seconds by the message watcher JS. Returns JSON only so
+    the client can decide whether a full history refresh is needed without
+    fetching any HTML.
+    """
+    from django.http import JsonResponse
+
+    latest = Message.objects.only("id", "created_at").first()
+    if latest:
+        data = {"latest_id": latest.pk, "created_at": latest.created_at.isoformat()}
+    else:
+        data = {"latest_id": 0, "created_at": None}
+
+    response = JsonResponse(data)
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────

@@ -41,10 +41,11 @@
     2. Provide spin-down capability to display the entire text and image for any message right there in the history panel.
     3. Provide an 'Expand All' toggle that spins-opens all messages simultaneously. Setting is persistent per user.
     5. Make history pane width adjustable. Setting is persistent. Edge case caution!
+- [x] Breaking News history list auto-refreshes as new messages arrive from another node.
 
 ## Open Items
 
-- [ ] Breaking News history list auto-refreshes as new messages arrive from another node.
+- [ ] History Select and Scoll bug. Scroll position must stay locked on selected row during clicking and arrow navigation.
 - [ ] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because it when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue
       Refreshed and help I had to go to a different URL I had to go to the Messages breaking news page instead of the login breaking news page

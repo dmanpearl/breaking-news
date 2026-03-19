@@ -12,5 +12,6 @@ urlpatterns = [
     path("<int:pk>/delete/", views.message_delete, name="delete"),
     path("<int:pk>/delete/confirm/", views.message_delete_confirm, name="delete_confirm"),
     path("history/", views.history_partial, name="history"),
+    path("poll/", views.messages_poll, name="poll"),
     path("landing/", views.landing, name="landing"),
 ]

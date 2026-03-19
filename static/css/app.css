@@ -800,3 +800,37 @@ a:hover { text-decoration: underline; }
   transition: background 0.1s, color 0.1s;
 }
 .acct-item:hover { background: #222; color: #fff; text-decoration: none; }
+
+/* ── New message indicator dot ── */
+.new-msg-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2ecc71;
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.4);
+  cursor: pointer;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+@keyframes dot-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+  50%  { box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+
+.new-msg-dot--pulse {
+  animation: dot-pulse 0.9s ease-out infinite;
+}
+
+/* ── History new-message highlight ── */
+@keyframes history-new-pulse {
+  0%   { background: #a8f0c6; }
+  60%  { background: #a8f0c6; }
+  100% { background: inherit; }
+}
+
+.history-item--new {
+  animation: history-new-pulse 1.4s ease-out forwards;
+}

@@ -15,6 +15,9 @@
 
       <a href="{% url 'core:profile' %}">{{ user.get_full_name|default:user.username }}</a>
 
+      <!-- New message indicator -- hidden until a new message arrives -->
+      <span id="new-msg-dot" class="new-msg-dot" title="New message arrived" style="display:none;" aria-label="New message"></span>
+
       <!-- Tools dropdown -- only shown when at least one item is accessible -->
       {% if user_is_staff or user_is_api_consumer %}
       <div class="acct-menu" id="tools-menu">
@@ -408,3 +411,133 @@
 })();
 </script>
 {% endblock %}
+
+<script>
+// ── Message watcher ───────────────────────────────────────────────────────
+// Polls /messages/poll/ every 5 seconds. When a new message is detected,
+// fetches the full history partial and swaps it in, preserving scroll
+// position and expand states. New items get a green pulse highlight.
+// A navbar dot pulses to signal arrival even when the new item is off-screen.
+(function () {
+  var POLL_MS = 5000;
+  var POLL_URL = '{% url "messaging:poll" %}';
+  var HISTORY_URL = '{% url "messaging:history" %}';
+
+  // Seed the known-latest-id from the current DOM so the first poll never
+  // false-triggers on our own messages.
+  function getMaxIdFromDom() {
+    var items = document.querySelectorAll('.history-item[data-pk]');
+    var max = 0;
+    items.forEach(function (el) {
+      var pk = parseInt(el.getAttribute('data-pk'), 10);
+      if (pk > max) max = pk;
+    });
+    return max;
+  }
+
+  var knownLatestId = getMaxIdFromDom();
+  var dot = document.getElementById('new-msg-dot');
+
+  function showDot() {
+    if (!dot) return;
+    dot.style.display = 'inline-block';
+    dot.classList.remove('new-msg-dot--pulse');
+    // Force reflow to restart animation.
+    void dot.offsetWidth;
+    dot.classList.add('new-msg-dot--pulse');
+  }
+
+  function hideDot() {
+    if (!dot) return;
+    dot.style.display = 'none';
+    dot.classList.remove('new-msg-dot--pulse');
+  }
+
+  function reapplyExpandStates(list) {
+    var expandAllActive = list.getAttribute('data-expand-all') === 'true';
+    list.querySelectorAll('.history-item').forEach(function (item) {
+      var pk = item.getAttribute('data-pk');
+      var btn = item.querySelector('.js-expand-btn');
+      if (expandAllActive) {
+        item.classList.add('is-expanded');
+        if (btn) btn.style.display = 'none';
+      } else {
+        var indiv = localStorage.getItem('bn_expand_' + pk) === '1';
+        item.classList.toggle('is-expanded', indiv);
+        if (btn) {
+          btn.setAttribute('aria-expanded', indiv ? 'true' : 'false');
+          btn.innerHTML = indiv ? '&#9660;' : '&#9654;';
+        }
+      }
+    });
+  }
+
+  function highlightNewItems(list, newIds) {
+    newIds.forEach(function (pk) {
+      var item = list.querySelector('.history-item[data-pk="' + pk + '"]');
+      if (!item) return;
+      item.classList.add('history-item--new');
+      // Remove after animation completes so the class can re-trigger.
+      setTimeout(function () {
+        item.classList.remove('history-item--new');
+      }, 1400);
+    });
+  }
+
+  function poll() {
+    fetch(POLL_URL, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var latestId = data.latest_id || 0;
+        if (latestId > knownLatestId) {
+          var prevKnown = knownLatestId;
+          knownLatestId = latestId;
+          showDot();
+          swapHistoryWithRange(prevKnown);
+        }
+      })
+      .catch(function () {});
+  }
+
+  function swapHistoryWithRange(prevKnownId) {
+    var oldList = document.getElementById('history-list');
+    if (!oldList) return;
+
+    var savedScroll = oldList.scrollTop;
+    var expandAllActive = oldList.getAttribute('data-expand-all') === 'true';
+
+    fetch(HISTORY_URL, { credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var newList = doc.getElementById('history-list');
+        if (!newList) return;
+
+        newList.setAttribute('data-expand-all', expandAllActive ? 'true' : 'false');
+        oldList.replaceWith(newList);
+        reapplyExpandStates(newList);
+        newList.scrollTop = savedScroll;
+
+        // Highlight all items with pk > prevKnownId.
+        var newIds = [];
+        newList.querySelectorAll('.history-item[data-pk]').forEach(function (el) {
+          if (parseInt(el.getAttribute('data-pk'), 10) > prevKnownId) {
+            newIds.push(el.getAttribute('data-pk'));
+          }
+        });
+        highlightNewItems(newList, newIds);
+        knownLatestId = getMaxIdFromDom();
+      })
+      .catch(function () {});
+  }
+
+  // Clicking the dot hides it.
+  if (dot) {
+    dot.addEventListener('click', function () { hideDot(); });
+  }
+
+  // Start polling.
+  setInterval(poll, POLL_MS);
+})();
+</script>
