@@ -38,10 +38,9 @@ class Message(models.Model):
         """True when the expanded view has more to show than the collapsed title.
 
         Cases where expansion shows something new:
-        - Message has both a headline and a body (body is additional content)
-        - Message has body-only with more than one line (first line is the
-          title, remaining lines are extra)
-        - Message has an image attachment
+        - Message has a headline (shown large) with optional body below
+        - Message has body-only with more than one line
+        - Message has any attachment (image preview or PDF download link)
         """
         if self.image:
             return True
@@ -76,10 +75,43 @@ class Message(models.Model):
                     size_str = f"{size / 1024:.1f} KB"
                 else:
                     size_str = f"{size / (1024 * 1024):.1f} MB"
-                return f"{ext} Attachment ({size_str})"
+                title = f"{ext} Attachment ({size_str})"
+                # For PDFs include the filename so the collapsed and expanded
+                # states are identical (no expand triangle needed).
+                if name.lower().endswith(".pdf"):
+                    bare = os.path.basename(name)
+                    # Strip the upload timestamp prefix (16 chars) that
+                    # Cloudinary/Django storage prepends.
+                    display_name = bare[16:] if len(bare) > 16 else bare
+                    if display_name:
+                        title = f"{title} \u00b7 {display_name}"
+                return title
             except Exception:
                 return "Attachment"
         return "(empty)"
+
+    @property
+    def display_pdf_label(self) -> str:
+        """Filename + human-readable filesize for the PDF download link.
+        Example: 'report.pdf (21.6 KB)'
+        """
+        try:
+            import os
+
+            name = self.image.name or ""
+            bare = os.path.basename(name)
+            # Strip the upload timestamp prefix (16 chars).
+            display_name = bare[16:] if len(bare) > 16 else bare
+            size = self.image.size
+            if size < 1024:
+                size_str = f"{size} B"
+            elif size < 1024 * 1024:
+                size_str = f"{size / 1024:.1f} KB"
+            else:
+                size_str = f"{size / (1024 * 1024):.1f} MB"
+            return f"{display_name} ({size_str})" if display_name else f"attachment.pdf ({size_str})"
+        except Exception:
+            return "attachment.pdf"
 
     @property
     def display_sender_full(self) -> str:

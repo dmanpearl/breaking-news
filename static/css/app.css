@@ -362,8 +362,19 @@ a:hover { text-decoration: underline; }
   color: var(--grey);
 }
 
-.history-expand-pdf a {
+.history-pdf-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.72rem;
   color: var(--action);
+  text-align: left;
+}
+
+.history-pdf-link:hover {
+  text-decoration: underline;
 }
 
 .history-meta {
