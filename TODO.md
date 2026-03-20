@@ -50,6 +50,7 @@
 - [x] Bug: Ocassional Forbidden (403) CSRF verification failed. Request aborted. More information is available with DEBUG=True.
       I had the error on the login page because when I closed down my computer and then I opened it back up and then I get to the username and password and that’s where I had the issue
       Refreshed and help I had to go to a different URL I had to go to the breakingnewsguys/messages page instead of the login breaking news page
+- [x] History: Add pop-over context menu on hover with delete trash-can-icon button right there in the row.
 
 ## Open Items
 

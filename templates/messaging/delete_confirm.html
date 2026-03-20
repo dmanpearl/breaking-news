@@ -45,6 +45,7 @@
       <form method="post" action="{% url 'messaging:delete' message.pk %}">
         {% csrf_token %}
         <input type="hidden" name="mode" value="everywhere">
+        {% if return_pk %}<input type="hidden" name="return_pk" value="{{ return_pk }}">{% endif %}
         <button type="submit" class="btn btn-danger">Delete everywhere</button>
       </form>
     </div>
@@ -57,20 +58,22 @@
       <form method="post" action="{% url 'messaging:delete' message.pk %}">
         {% csrf_token %}
         <input type="hidden" name="mode" value="local">
+        {% if return_pk %}<input type="hidden" name="return_pk" value="{{ return_pk }}">{% endif %}
         <button type="submit" class="btn btn-danger">Delete local copy only</button>
       </form>
     </div>
 
   </div>
-  <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
+  <a href="{% if return_pk %}{% url 'messaging:detail' return_pk %}{% else %}{% url 'messaging:detail' message.pk %}{% endif %}" class="btn">Cancel</a>
 
   {% elif message.sent %}
   <form method="post" action="{% url 'messaging:delete' message.pk %}">
     {% csrf_token %}
     <input type="hidden" name="mode" value="local">
+    {% if return_pk %}<input type="hidden" name="return_pk" value="{{ return_pk }}">{% endif %}
     <div class="form-actions">
       <button type="submit" class="btn btn-danger">Delete</button>
-      <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
+      <a href="{% if return_pk %}{% url 'messaging:detail' return_pk %}{% else %}{% url 'messaging:detail' message.pk %}{% endif %}" class="btn">Cancel</a>
     </div>
   </form>
 
@@ -81,9 +84,10 @@
   <form method="post" action="{% url 'messaging:delete' message.pk %}">
     {% csrf_token %}
     <input type="hidden" name="mode" value="local">
+    {% if return_pk %}<input type="hidden" name="return_pk" value="{{ return_pk }}">{% endif %}
     <div class="form-actions">
       <button type="submit" class="btn btn-danger">Delete draft</button>
-      <a href="{% url 'messaging:detail' message.pk %}" class="btn">Cancel</a>
+      <a href="{% if return_pk %}{% url 'messaging:detail' return_pk %}{% else %}{% url 'messaging:detail' message.pk %}{% endif %}" class="btn">Cancel</a>
     </div>
   </form>
   {% endif %}

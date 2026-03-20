@@ -192,8 +192,11 @@ def message_delete_confirm(request, pk):
         flash.error(request, "You do not have permission to delete messages.")
         return redirect("messaging:detail", pk=pk)
     message = get_object_or_404(Message, pk=pk)
+    # return_pk is the message the user was viewing before clicking delete.
+    # It is passed through the confirm page and used for post-delete navigation.
+    return_pk = request.GET.get("return_pk") or request.POST.get("return_pk")
     ctx = _base_context(request)
-    ctx.update({"message": message})
+    ctx.update({"message": message, "return_pk": return_pk})
     return render(request, "messaging/delete_confirm.html", ctx)
 
 
@@ -208,6 +211,7 @@ def message_delete(request, pk):
 
     msg = get_object_or_404(Message, pk=pk)
     mode = request.POST.get("mode", "local")
+    return_pk = request.POST.get("return_pk")
 
     if mode == "everywhere" and msg.sent:
         results = delete_sent_messages(msg)
@@ -215,7 +219,25 @@ def message_delete(request, pk):
 
     msg.delete()
     flash.success(request, "Message deleted from Breaking News.")
-    return redirect("messaging:index")
+
+    # Navigate after delete:
+    # - If a different message was selected (return_pk), go back to it.
+    # - If the deleted message was the selected one (or no return_pk),
+    #   go to the next message in the list, then previous, then create.
+    if return_pk and return_pk != str(pk):
+        try:
+            Message.objects.get(pk=return_pk)
+            return redirect("messaging:detail", pk=return_pk)
+        except Message.DoesNotExist:
+            pass
+
+    # Deleted message was the selected one -- find next or previous.
+    next_msg = Message.objects.filter(pk__lt=pk).first()  # next older
+    if not next_msg:
+        next_msg = Message.objects.first()  # wrap to newest
+    if next_msg:
+        return redirect("messaging:detail", pk=next_msg.pk)
+    return redirect("messaging:create")
 
 
 @login_required
@@ -242,6 +264,7 @@ def history_partial(request):
         {
             "history": Message.objects.select_related("created_by").all(),
             "history_expand_all": history_expand_all,
+            "user_is_editor": is_editor(request.user),
         },
     )
 

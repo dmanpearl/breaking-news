@@ -841,6 +841,51 @@ a:hover { text-decoration: underline; }
 }
 .acct-item:hover { background: #222; color: #fff; text-decoration: none; }
 
+/* ── History row context menu ── */
+.history-context-menu {
+  position: absolute;
+  top: 0.4rem;
+  right: 2.2rem; /* clear of the expand triangle button */
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(245, 240, 232, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.2rem 0.3rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+
+/* Show on row hover -- desktop only */
+@media (hover: hover) {
+  .history-item:hover .history-context-menu {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.history-context-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--grey);
+  text-decoration: none;
+  transition: color 0.1s, background 0.1s;
+}
+
+.history-context-btn:hover {
+  color: var(--red);
+  background: rgba(181, 48, 58, 0.08);
+  text-decoration: none;
+}
+
 /* ── New message indicator dot ── */
 /* Always occupies space in the nav so surrounding elements never shift.
    Invisible at rest -- lit when new messages arrive. */
