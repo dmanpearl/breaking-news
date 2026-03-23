@@ -282,27 +282,36 @@ def history_partial(request):
     )
 
 
+import time as _poll_time
+
+_poll_cache: dict = {"data": None, "expires": 0.0}
+
+
 @login_required
 def messages_poll(request):
     """Lightweight poll endpoint -- returns the latest message pk and count.
 
-    Called every 2 seconds by the message watcher JS. Returns JSON only so
-    the client can decide whether a full history refresh is needed without
-    fetching any HTML.
-
-    The count allows the client to detect deletions: if it drops, the
-    history list is refreshed the same way as on a new message arrival.
+    Cached in-process for 2 seconds so rapid polling from multiple users
+    does not hit the database on every request. The cache is process-global
+    so all users share one DB read per 2-second window.
     """
     from django.http import JsonResponse
 
-    latest = Message.objects.only("id", "created_at").first()
-    count = Message.objects.count()
-    if latest:
-        data = {"latest_id": latest.pk, "count": count, "created_at": latest.created_at.isoformat()}
-    else:
-        data = {"latest_id": 0, "count": 0, "created_at": None}
+    now = _poll_time.monotonic()
+    if _poll_cache["data"] is None or now >= _poll_cache["expires"]:
+        latest = Message.objects.only("id", "created_at").first()
+        count = Message.objects.count()
+        if latest:
+            _poll_cache["data"] = {
+                "latest_id": latest.pk,
+                "count": count,
+                "created_at": latest.created_at.isoformat(),
+            }
+        else:
+            _poll_cache["data"] = {"latest_id": 0, "count": 0, "created_at": None}
+        _poll_cache["expires"] = now + 2.0
 
-    response = JsonResponse(data)
+    response = JsonResponse(_poll_cache["data"])
     response["Cache-Control"] = "no-store"
     return response
 
