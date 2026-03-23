@@ -209,7 +209,20 @@ def message_delete(request, pk):
     if request.method != "POST":
         return redirect("messaging:delete_confirm", pk=pk)
 
-    msg = get_object_or_404(Message, pk=pk)
+    try:
+        msg = Message.objects.get(pk=pk)
+    except Message.DoesNotExist:
+        # Already deleted (double-submit) -- navigate away cleanly.
+        if return_pk:
+            try:
+                Message.objects.get(pk=return_pk)
+                return redirect("messaging:detail", pk=return_pk)
+            except Message.DoesNotExist:
+                pass
+        next_msg = Message.objects.first()
+        if next_msg:
+            return redirect("messaging:detail", pk=next_msg.pk)
+        return redirect("messaging:create")
     mode = request.POST.get("mode", "local")
     return_pk = request.POST.get("return_pk")
 

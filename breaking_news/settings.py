@@ -76,13 +76,7 @@ DATABASE_URL = config("DATABASE_PUBLIC_URL", default="") or config(
 )
 
 if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=30,
-            conn_health_checks=True,
-        )
-    }
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=60)}
 else:
     DATABASES = {
         "default": {
