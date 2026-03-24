@@ -497,7 +497,10 @@
 
     // Fetch the new list to find which pks are gone.
     fetch(HISTORY_URL, { credentials: 'same-origin' })
-      .then(function (r) { return r.text(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('history fetch failed: ' + r.status);
+        return r.text();
+      })
       .then(function (html) {
         var parser = new DOMParser();
         var doc = parser.parseFromString(html, 'text/html');
@@ -570,12 +573,15 @@
     var savedScroll = oldList.scrollTop;
 
     fetch(HISTORY_URL, { credentials: 'same-origin' })
-      .then(function (r) { return r.text(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('history fetch failed: ' + r.status);
+        return r.text();
+      })
       .then(function (html) {
         var parser = new DOMParser();
         var doc = parser.parseFromString(html, 'text/html');
         var newList = doc.getElementById('history-list');
-        if (!newList) return;
+        if (!newList) return; // server returned unexpected HTML -- leave existing list
 
         // Use the live JS variable -- more reliable than the DOM attribute
         // which may reflect a stale server-rendered value.
@@ -594,7 +600,10 @@
         knownCount = newList.querySelectorAll('.history-item[data-pk]').length;
         setRefreshSpinning(false);
       })
-      .catch(function () { setRefreshSpinning(false); });
+      .catch(function () {
+        // Fetch failed (network error, 500, etc.) -- leave existing list intact.
+        setRefreshSpinning(false);
+      });
   }
 
   var knownCount = document.querySelectorAll('.history-item[data-pk]').length;

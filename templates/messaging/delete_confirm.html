@@ -72,7 +72,7 @@
     <input type="hidden" name="mode" value="local">
     {% if return_pk %}<input type="hidden" name="return_pk" value="{{ return_pk }}">{% endif %}
     <div class="form-actions">
-      <button type="submit" class="btn btn-danger">Delete</button>
+      <button type="submit" class="btn btn-danger">Confirm Delete</button>
       <a href="{% if return_pk %}{% url 'messaging:detail' return_pk %}{% else %}{% url 'messaging:detail' message.pk %}{% endif %}" class="btn">Cancel</a>
     </div>
   </form>
@@ -86,7 +86,7 @@
     <input type="hidden" name="mode" value="local">
     {% if return_pk %}<input type="hidden" name="return_pk" value="{{ return_pk }}">{% endif %}
     <div class="form-actions">
-      <button type="submit" class="btn btn-danger">Delete draft</button>
+      <button type="submit" class="btn btn-danger">Confirm Delete</button>
       <a href="{% if return_pk %}{% url 'messaging:detail' return_pk %}{% else %}{% url 'messaging:detail' message.pk %}{% endif %}" class="btn">Cancel</a>
     </div>
   </form>

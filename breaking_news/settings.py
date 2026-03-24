@@ -77,7 +77,7 @@ DATABASE_URL = config("DATABASE_URL", default="") or config(
 )
 
 if DATABASE_URL:
-    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=60)}
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=0)}
 else:
     DATABASES = {
         "default": {
@@ -85,6 +85,12 @@ else:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+
+# Use cached sessions so session lookups hit memory instead of the DB.
+# With conn_max_age=0 every DB-backed session check opens a new connection --
+# this eliminates that cost entirely. Sessions are cached per-process in RAM;
+# they fall back to the database automatically on cache miss (e.g. after deploy).
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 AUTH_USER_MODEL = "core.User"
 LOGIN_URL = "core:login"
