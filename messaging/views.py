@@ -46,6 +46,12 @@ def is_api_consumer(user):
 def _base_context(request):
     """Common context injected into every messaging view."""
     settings = SiteSettings.get()
+    # Prefetch groups once so is_editor and is_api_consumer both reuse
+    # the cached result instead of each issuing a separate DB query.
+    if not request.user.is_superuser and not request.user.is_staff:
+        from django.db.models import prefetch_related_objects
+
+        prefetch_related_objects([request.user], "groups")
     return {
         "history": Message.objects.select_related("created_by").all()[:50],
         "headline_enabled": settings.headline_enable,
