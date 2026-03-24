@@ -153,8 +153,6 @@
     if (link) saveScroll();
   });
 
-  restoreScroll();
-
   // ── Auto-dismiss success flashes after 750ms ──────────────────────────
   var successes = document.querySelectorAll('.flash.success');
   if (successes.length) {
@@ -374,6 +372,8 @@
     var list = document.getElementById('history-list');
     if (!list) return;
     reapplyExpandStates(list);
+    list.style.visibility = '';
+    restoreScroll(); // must run after expand states so row heights are correct
   })();
 
   // Individual expand button clicks.
@@ -441,7 +441,7 @@
 
     var link = target.querySelector('.history-row-link');
     if (link) {
-      saveScroll();
+      saveScroll(); // save after scroll adjustment, not before
       window.location.href = link.href;
     }
   });

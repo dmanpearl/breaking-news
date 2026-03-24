@@ -47,7 +47,7 @@ def _base_context(request):
     """Common context injected into every messaging view."""
     settings = SiteSettings.get()
     return {
-        "history": Message.objects.select_related("created_by").all(),
+        "history": Message.objects.select_related("created_by").all()[:50],
         "headline_enabled": settings.headline_enable,
         "user_is_editor": is_editor(request.user),
         "user_is_api_consumer": is_api_consumer(request.user),
@@ -275,7 +275,7 @@ def history_partial(request):
         request,
         "messaging/history_list.html",
         {
-            "history": Message.objects.select_related("created_by").all(),
+            "history": Message.objects.select_related("created_by").all()[:50],
             "history_expand_all": history_expand_all,
             "user_is_editor": is_editor(request.user),
         },

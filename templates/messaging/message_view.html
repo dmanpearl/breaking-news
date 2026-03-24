@@ -14,24 +14,45 @@
   <h1>
     {% if mode == "create" %}New Message
     {% elif mode == "edit" %}Edit Message
-    {% else %}{{ message.display_title }}
+    {% elif message.headline %}{{ message.headline }}
+    {% else %}Message
     {% endif %}
   </h1>
 
   {% if mode == "view" and message %}
     {% if user_is_editor %}
+    <div class="msg-view-actions">
       {% if message.can_edit %}
-        <a href="{% url 'messaging:edit' message.pk %}" class="btn">Edit</a>
+        <a href="{% url 'messaging:edit' message.pk %}" class="sidebar-icon-btn" title="Edit message">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/>
+          </svg>
+        </a>
       {% else %}
-        <span class="btn" style="opacity:0.4;cursor:not-allowed;" title="Enable 'Can edit sent' on a connection to allow editing.">Edit</span>
+        <span class="sidebar-icon-btn" style="opacity:0.3;cursor:not-allowed;" title="Enable 'Can edit sent' on a connection to allow editing.">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/>
+          </svg>
+        </span>
       {% endif %}
-      <form method="post" action="{% url 'messaging:send' message.pk %}" style="display:inline;">
+      <form method="post" action="{% url 'messaging:send' message.pk %}" style="display:contents;">
         {% csrf_token %}
-        <button type="submit" class="btn btn-send">
-          {% if message.sent %}Resend{% else %}Send{% endif %}
+        <button type="submit" class="sidebar-icon-btn" title="{% if message.sent %}Resend{% else %}Send{% endif %}">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="7" x2="13" y2="7"/>
+            <polyline points="7 1 13 7 7 13"/>
+          </svg>
         </button>
       </form>
-      <a href="{% url 'messaging:delete_confirm' message.pk %}" class="btn btn-danger">Delete</a>
+      <a href="{% url 'messaging:delete_confirm' message.pk %}{% if active_id and active_id != message.pk %}?return_pk={{ active_id }}{% endif %}" class="sidebar-icon-btn" title="Delete message" style="color:var(--grey);" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--grey)'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </a>
+    </div>
     {% endif %}
   {% endif %}
 </div>
@@ -56,7 +77,7 @@
     </a>
   </div>
   {% else %}
-  <img class="message-image" src="{{ message.image.url }}" alt="Attachment" />
+  <img class="message-image" src="{{ message.image.url }}" alt="Attachment" loading="lazy" />
   {% endif %}
   {% endwith %}
   {% endif %}
