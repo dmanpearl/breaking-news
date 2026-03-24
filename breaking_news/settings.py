@@ -175,6 +175,11 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     # Redirect any plain HTTP requests to HTTPS.
     SECURE_SSL_REDIRECT = True
+    # Django SecurityMiddleware sends Cross-Origin-Opener-Policy: same-origin
+    # by default. In Safari this causes fetch access control errors on
+    # same-origin requests after form POST navigations (delete confirm, etc.).
+    # This is a single-domain app so COOP provides no meaningful benefit.
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
     # Ensure production domains are always in CSRF_TRUSTED_ORIGINS regardless of
     # whether the env var was set. Merges with any env-var entries without duplicating.
     _production_origins = [
