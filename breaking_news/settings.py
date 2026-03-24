@@ -77,7 +77,7 @@ DATABASE_URL = config("DATABASE_URL", default="") or config(
 )
 
 if DATABASE_URL:
-    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=0)}
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=60)}
 else:
     DATABASES = {
         "default": {
@@ -136,6 +136,15 @@ if CLOUDINARY_URL:
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 PHONENUMBER_DEFAULT_REGION = "US"
+
+# Increase the async-to-sync thread pool beyond the default (cpu_count+4 ~= 6).
+# Every synchronous Django view runs in this pool under uvicorn ASGI. With
+# multiple users polling every 3.5s plus user actions, the default pool
+# fills and requests queue -- causing the observed 10-30s delays. Threads
+# spend most time waiting on I/O (DB, network) not CPU, so 20 is safe at
+# 0.35 vCPU. Django 4.2+ honours ASGI_THREADS; earlier versions use the
+# environment variable ASGI_THREADS picked up by asgiref directly.
+ASGI_THREADS = 20
 
 # HTTPS / CSRF settings for production
 # CSRF_TRUSTED_ORIGINS is loaded from the env var. When not set we fall back to
