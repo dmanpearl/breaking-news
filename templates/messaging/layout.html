@@ -489,6 +489,7 @@
   }
 
   function flashDeletedThenSwap() {
+    swapInProgress = true;
     // Collect pks currently visible in the DOM.
     var currentPks = {};
     document.querySelectorAll('.history-item[data-pk]').forEach(function (el) {
@@ -536,14 +537,16 @@
           newList.setAttribute('data-expand-all', expandAllActive ? 'true' : 'false');
           oldList.replaceWith(newList);
           reapplyExpandStates(newList);
+          newList.style.visibility = ''; // clear the hidden-until-ready sentinel
           newList.scrollTop = savedScroll;
           localizeTimestamps(newList);
           knownLatestId = getMaxIdFromDom();
           knownCount = newList.querySelectorAll('.history-item[data-pk]').length;
           setTimeout(hideDot, 1000);
+          swapInProgress = false;
         }, 750);
       })
-      .catch(function () {});
+      .catch(function () { swapInProgress = false; });
   }
 
   function highlightNewItems(list, prevKnownId) {
@@ -571,19 +574,17 @@
     if (!oldList) return;
 
     var savedScroll = oldList.scrollTop;
+    swapInProgress = true;
 
     fetch(HISTORY_URL, { credentials: 'same-origin' })
       .then(function (r) {
-        console.log('[BN] history fetch status:', r.status, r.url);
         if (!r.ok) throw new Error('history fetch failed: ' + r.status);
         return r.text();
       })
       .then(function (html) {
-        console.log('[BN] history response first 200:', html.substring(0, 200));
         var parser = new DOMParser();
         var doc = parser.parseFromString(html, 'text/html');
         var newList = doc.getElementById('history-list');
-        console.log('[BN] history-list found:', !!newList, 'html length:', html.length);
         if (!newList) return; // server returned unexpected HTML -- leave existing list
 
         // Use the live JS variable -- more reliable than the DOM attribute
@@ -591,6 +592,7 @@
         newList.setAttribute('data-expand-all', expandAllActive ? 'true' : 'false');
         oldList.replaceWith(newList);
         reapplyExpandStates(newList);
+        newList.style.visibility = ''; // clear the hidden-until-ready sentinel
         newList.scrollTop = savedScroll;
         localizeTimestamps(newList);
 
@@ -602,18 +604,25 @@
         knownLatestId = getMaxIdFromDom();
         knownCount = newList.querySelectorAll('.history-item[data-pk]').length;
         setRefreshSpinning(false);
+        swapInProgress = false;
       })
       .catch(function () {
         // Fetch failed (network error, 500, etc.) -- leave existing list intact.
         setRefreshSpinning(false);
+        swapInProgress = false;
       });
   }
 
   var knownCount = document.querySelectorAll('.history-item[data-pk]').length;
+  var isLoggedIn = {% if user.is_authenticated %}true{% else %}false{% endif %};
   var pollInFlight = false;
+  var swapInProgress = false;
 
   function poll() {
-    if (pollInFlight) return;
+    if (!isLoggedIn || pollInFlight || swapInProgress) {
+      setTimeout(poll, POLL_MS);
+      return;
+    }
     pollInFlight = true;
     fetch(POLL_URL, { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
