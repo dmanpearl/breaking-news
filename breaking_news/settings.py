@@ -42,6 +42,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "breaking_news.db_debug_middleware.DbDebugMiddleware",  # DB-DBG remove when done
 ]
 
 ROOT_URLCONF = "breaking_news.urls"
@@ -239,6 +240,11 @@ LOGGING = {
             "propagate": False,
         },
         "messaging": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "db_debug": {  # DB-DBG remove when done
             "handlers": ["console"],
             "level": "DEBUG",
             "propagate": False,

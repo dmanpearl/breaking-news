@@ -74,7 +74,7 @@ def index(request):
 
 @login_required
 def message_detail(request, pk):
-    message = get_object_or_404(Message, pk=pk)
+    message = get_object_or_404(Message.objects.select_related("created_by"), pk=pk)
     receipts = message.receipts.select_related("connection").all()
     ctx = _base_context(request)
     ctx.update(
@@ -124,7 +124,7 @@ def message_edit(request, pk):
     if not is_editor(request.user):
         flash.error(request, "You do not have permission to edit messages.")
         return redirect("messaging:detail", pk=pk)
-    message = get_object_or_404(Message, pk=pk)
+    message = get_object_or_404(Message.objects.select_related("created_by"), pk=pk)
     if not message.can_edit:
         flash.error(
             request,
@@ -290,32 +290,43 @@ def history_partial(request):
 
 import time as _poll_time
 
+from django.contrib.auth import SESSION_KEY as _AUTH_SESSION_KEY
+
 _poll_cache: dict = {"data": None, "expires": 0.0}
+# TTL > poll interval (3.5s) so a single active user hits the cache on
+# consecutive polls instead of always missing it.
+_POLL_CACHE_TTL = 5.0
 
 
-@login_required
 def messages_poll(request):
     """Lightweight poll endpoint -- returns the latest message pk and count.
 
-    Cached in-process for 2 seconds so rapid polling from multiple users
-    does not hit the database on every request. The cache is process-global
-    so all users share one DB read per 2-second window.
+    Uses a session key check instead of @login_required to avoid a User
+    DB lookup on every poll. The session is served from the in-process cache
+    (cached_db backend) so no DB hit for auth on cache-warm requests.
+
+    Cached in-process for 5 seconds so consecutive polls from one user and
+    simultaneous polls from multiple users share one DB read per window.
     """
+    from django.db.models import Count, Max
     from django.http import JsonResponse
+
+    if not request.session.get(_AUTH_SESSION_KEY):
+        return JsonResponse({}, status=403)
 
     now = _poll_time.monotonic()
     if _poll_cache["data"] is None or now >= _poll_cache["expires"]:
-        latest = Message.objects.only("id", "created_at").first()
-        count = Message.objects.count()
-        if latest:
-            _poll_cache["data"] = {
-                "latest_id": latest.pk,
-                "count": count,
-                "created_at": latest.created_at.isoformat(),
-            }
-        else:
-            _poll_cache["data"] = {"latest_id": 0, "count": 0, "created_at": None}
-        _poll_cache["expires"] = now + 2.0
+        agg = Message.objects.aggregate(
+            count=Count("id"),
+            latest_id=Max("id"),
+            latest_at=Max("created_at"),
+        )
+        _poll_cache["data"] = {
+            "latest_id": agg["latest_id"] or 0,
+            "count": agg["count"],
+            "created_at": agg["latest_at"].isoformat() if agg["latest_at"] else None,
+        }
+        _poll_cache["expires"] = now + _POLL_CACHE_TTL
 
     response = JsonResponse(_poll_cache["data"])
     response["Cache-Control"] = "no-store"

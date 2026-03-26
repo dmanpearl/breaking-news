@@ -154,9 +154,13 @@ class Message(models.Model):
 
     @property
     def delivery_summary(self):
-        receipts = self.receipts.all()
-        total = receipts.count()
-        success = receipts.filter(success=True).count()
+        from django.db.models import Count, Q
+        agg = self.receipts.aggregate(
+            total=Count("id"),
+            success=Count("id", filter=Q(success=True)),
+        )
+        total = agg["total"]
+        success = agg["success"]
         return {"total": total, "success": success, "failed": total - success}
 
 

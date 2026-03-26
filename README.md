@@ -66,6 +66,18 @@ python manage.py runserver
 
 Visit **http://127.0.0.1:8000/** and log in with `admin` / `yourpassword`.
 
+### DB query tracing (optional, temporary)
+
+To log every database query per request with timing:
+
+```bash
+DB_DEBUG=1 python manage.py runserver
+```
+
+All output is prefixed with `DB-DBG` for easy filtering. On Railway, add
+`DB_DEBUG=1` as a service variable and tail the logs with `railway logs --tail`.
+See `breaking_news/db_debug_middleware.py` for removal instructions.
+
 ---
 
 ## Django Admin
