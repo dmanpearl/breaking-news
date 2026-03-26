@@ -54,6 +54,8 @@
 
 ## Open Items
 
+- [ ] Users are still experience  4-6 second lag on New, Send, Delete, Confirm, Refresh, and other commands.
+- [ ] service unavaiable: A stakeholder got this error once this morning (3/26/26). No more context. Quick recovery via refresh.
 - [ ] Implement Usage Log for Users similar to the existing API Usage Log
 - [ ] Admin panel delete messages bulk one of the confirmation buttons is truncated (bottom half cut off)
 - [ ] Support multiple send groups (for developers and differing client types)
