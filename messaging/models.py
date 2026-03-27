@@ -34,23 +34,6 @@ class Message(models.Model):
         return self.headline
 
     @property
-    def has_expand_content(self) -> bool:
-        """True when the expanded view has more to show than the collapsed title.
-
-        Cases where expansion shows something new:
-        - Message has a headline (shown large) with optional body below
-        - Message has body-only with more than one line
-        - Message has any attachment (image preview or PDF download link)
-        """
-        if self.image:
-            return True
-        if self.headline and self.body:
-            return True
-        if self.body and "\n" in self.body.strip():
-            return True
-        return False
-
-    @property
     def display_title(self) -> str:
         """
         Title for the history sidebar.
