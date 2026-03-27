@@ -330,12 +330,12 @@ a:hover { text-decoration: underline; }
 }
 
 .history-expand-body {
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.88rem;
+  line-height: 1.3;
   color: var(--ink);
   white-space: pre-wrap;
   word-break: break-word;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.15rem;
 }
 
 .history-expand-image-wrap {
