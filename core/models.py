@@ -56,6 +56,11 @@ class UserPreferences(models.Model):
         default=False,
         help_text="Expand all history items by default.",
     )
+    ui_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Namespaced UI preference blob (keyed by feature slug).",
+    )
 
     class Meta:
         verbose_name = "User Preferences"

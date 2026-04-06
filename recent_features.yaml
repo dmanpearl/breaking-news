@@ -1,0 +1,255 @@
+recent_features:
+  - id: feat_2026-04-06_recent_features
+    date: 2026-04-06
+    title: Recent Features
+    description: >
+      Keeps track of recent features and fixes. Displays the most recent until
+      dismissed. Adds Recent Features path with a list of new features and fixes
+      ordered by date. Recent Features View is also accessible in the Account menu.
+  - id: feat_2026-04-06_adjust
+    date: 2026-04-06
+    title: Header Style
+    description: >
+      Adjust the height of right-panel headers to match left
+  - id: fix_2026-03-27_match
+    date: 2026-03-27
+    title: Fix History
+    description: >
+      Match expanded and collapsed fonts and spacing
+  - id: fix_2026-03-27_show
+    date: 2026-03-27
+    title: History Spin-Down
+    description: >
+      Show expand triangle for all messages when Expand All is off
+  - id: fix_2026-03-24_update
+    date: 2026-03-24
+    title: History Controls
+    description: >
+      Update New and Refresh button submit styles
+  - id: fix_2026-03-24_duplicate
+    date: 2026-03-24
+    title: Fix History Display
+    description: >
+      Avoid duplicate titles, properly crop images, scroll with arrow-keys, increase new message flashing
+  - id: fix_2026-03-23_increase
+    date: 2026-03-23
+    title: Performance Thread Queue
+    description: >
+      Increase ASGI thread pool to 20 to prevent request queuing
+  - id: fix_2026-03-23_use
+    date: 2026-03-23
+    title: Performance DB Caching
+    description: >
+      Use internal DB URL, cache poll endpoint, conn_max_age=0
+  - id: fix_2026-03-23_fix
+    date: 2026-03-23
+    title: Performance DB Connections
+    description: >
+      Eliminate stale DB connection errors causing 30s send delays
+  - id: feat_2026-03-20_add
+    date: 2026-03-20
+    title: History
+    description: >
+      add pop-over smart delete functionality
+  - id: fix_2026-03-19_prevent
+    date: 2026-03-19
+    title: Fix auth
+    description: >
+      prevent CSRF 403 on login after sleep/wake
+  - id: feat_2026-03-19_update
+    date: 2026-03-19
+    title: History
+    description: >
+      update display style for pdf messages without text
+  - id: fix_2026-03-19_fix
+    date: 2026-03-19
+    title: Fix history
+    description: >
+      fix history list scroll issues on select and arrow navigation
+  - id: feat_2026-03-19_list
+    date: 2026-03-19
+    title: History
+    description: >
+      list updates for timestamps, expand, and delete
+  - id: feat_2026-03-18_history_list
+    date: 2026-03-18
+    title: Remote Inserts and Deletes
+    description: >
+      The history list detects inserts and deletes
+  - id: feat_2026-03-18_Add
+    date: 2026-03-18
+    title: History Item Spin-down
+    description: >
+      Add expand all and spin-down capability
+  - id: feat_2026-03-18_resizable
+    date: 2026-03-18
+    title: History Panel Resize
+    description: >
+      resizable history panel and navbar overhaul
+  - id: fix_2026-03-18_prevent
+    date: 2026-03-18
+    title: Fix Data Shutdown
+    description: >
+      prevent connection exhaustion under SSE load
+  - id: feat_2026-03-17_send
+    date: 2026-03-17
+    title: optimize(send)
+    description: >
+      send messages faster
+  - id: feat_2026-03-09_API
+    date: 2026-03-09
+    title: API
+    description: >
+      Remove API filter button
+  - id: feat_2026-03-09_add
+    date: 2026-03-09
+    title: API
+    description: >
+      Add owner filtering to API usage log
+  - id: feat_2026-03-09_tie
+    date: 2026-03-09
+    title: API
+    description: >
+      Tie API_Key to a User
+  - id: feat_2026-03-07_create
+    date: 2026-03-07
+    title: API
+    description: >
+      Create API log usage view
+  - id: feat_2026-03-05_add_streaming_endpoint
+    date: 2026-03-05
+    title: API
+    description: >
+      Add API streaming endpoint for real-time message updates
+  - id: feat_2026-03-05_add_restful_api
+    date: 2026-03-05
+    title: API
+    description: >
+      Add RESTful API for messaging system
+  - id: feat_2026-03-04_Disallow
+    date: 2026-03-04
+    title: Visitor Permissions
+    description: >
+      Disallow visitors from edit, send, or delete
+  - id: feat_2026-03-04_Update_secure
+    date: 2026-03-04
+    title: Networking
+    description: >
+      Update SECURE_PROXY_SSL_HEADER and SECURE_SSL_REDIRECT for Squarespace hosting
+  - id: feat_2026-03-04_Add
+    date: 2026-03-04
+    title: Connections
+    description: >
+      Add Enable/Disable controls in Admin view
+  - id: feat_2026-03-04_Update_image
+    date: 2026-03-04
+    title: App Icon
+    description: >
+      update the Breaking News image icon  with a dark background to match the app bg color
+  - id: feat_2026-03-04_support
+    date: 2026-03-04
+    title: Slack Attachments
+    description: >
+      Support image and PDF file attachments for Slack messages
+  - id: feat_2026-03-02_add
+    date: 2026-03-02
+    title: Slack
+    description: >
+      Add Slack connection type
+  - id: feat_2026-03-02_implement_delete
+    date: 2026-03-02
+    title: Message Delete
+    description: >
+      Implement the ability to delete messages. This feature allows users to permanently
+      remove messages from the history view, providing a way to manage and organize their
+      message history effectively. Deleted messages will no longer be visible in the history
+      list, but may still be retained in the database for auditing purposes.
+  - id: fix_2026-03-02_PDF
+    date: 2026-03-02
+    title: Maintain Filenames
+    description: >
+      Fix a bug for PDF uploads where the file was not retaining its original filename
+  - id: feat_2026-03-02_display
+    date: 2026-03-02
+    title: Sender Name
+    description: >
+      Display the message sender's name in history and message view
+  - id: feat_2026-03-01_Support
+    date: 2026-03-01
+    title: PDF Uploads
+    description: >
+      Support PDF file format uploads
+  - id: fix_2026-03-01_fix_gif_bug
+    date: 2026-03-01
+    title: Fix GIF Images
+    description: >
+      Fix a bug where .gif images failed to upload by honoring the gif mime type through cloudinary and discord
+  - id: feat_2026-03-01_Add
+    date: 2026-03-01
+    title: Authentication
+    description: >
+      Add eyeball button in password fields to view plaintext passwords (Login & Admin User Create)
+  - id: feat_2026-03-01_install
+    date: 2026-03-01
+    title: Cloudinary
+    description: >
+      Install cloudinary for attached image caching. This enables uploaded images
+      to be viewed in the history for any message on any device.
+  - id: feat_2026-03-01_Implement
+    date: 2026-03-01
+    title: Paste and Drag-n-Drop
+    description: >
+      Implement the ability to quickly add images with clipboard paste and drag-n-drop
+      functionality directly into the message body, streamlining the process of
+      including visual content in messages.
+  - id: feat_2026-02-28_Instant
+    date: 2026-02-28
+    title: Auto-Reload
+    description: >
+      After sending a message, immediately create a new message form so the user
+      can begin typing the next message without needing to click New '+' again.
+      This allows for a more seamless and efficient messaging experience,
+      especially when sending multiple messages in quick succession.
+  - id: feat_2026-02-28_Auto
+    date: 2026-02-28
+    title: Insta-Type
+    description: >
+      Auto-focus the cursor in the message body after pressing New '+' to enable
+      instant typing and sending.
+  - id: feat_2026-02-28_disable
+    date: 2026-02-28
+    title: Disable Headline
+    description: >
+      Removes the message headline. It's still there in case we want to add it
+      back, but for now it was just taking up space and not adding much value.
+  - id: feat_2026-02-28_Enter
+    date: 2026-02-28
+    title: Fast Send Hotkey
+    description: >
+      The keyboard Enter key now sends your message supporting rapid-fire distribution.
+       Pressing Shift+Enter creates a new line without sending, allowing for multi-line messages.
+       This feature is designed to enhance the speed and efficiency of message sending,
+       making it easier to communicate quickly.
+  - id: feat_2026-02-28_allow
+    date: 2026-02-28
+    title: Send
+    description: >
+      Implements message sending capability. Allows users to compose and send
+      messages, which are then stored in the database and displayed in the history
+      view. The message sending process includes form validation, error handling,
+      and real-time updates to the message history.
+  - id: fix_2026-02-27_history
+    date: 2026-02-27
+    title: History
+    description: >
+      Generate a list of recent messages in the history view in the left sidebar,
+      ordered by date, with the most recent at the top. Clicking on a message in
+      the history list expands it to show all details and any attachments.
+  - id: feat_2026-02-27_initial
+    date: 2026-02-27
+    title: Initial Commit
+    description: >
+      This is the first check-in of the Breaking News codebase. It includes the
+      initial implementation of the message history, message sending, and user
+      authentication features. The codebase is built with Django and React, and
+      is designed to be deployed on Railway.

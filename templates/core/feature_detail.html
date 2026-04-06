@@ -1,0 +1,85 @@
+{% extends "messaging/layout.html" %}
+{% load static %}
+
+{% block title %}{{ feature.title }} — Recent Features — Breaking News{% endblock %}
+
+{% block shell_class %}app-shell--no-sidebar{% endblock %}
+{% block sidebar %}{% endblock %}
+
+{% block main_content %}
+<div class="rf-detail-page">
+
+  <div class="section-header">
+    <div>
+      <div style="font-family:var(--mono); font-size:0.65rem; font-weight:700;
+                  letter-spacing:1.2px; text-transform:uppercase; color:var(--grey);
+                  margin-bottom:3px;">Recent Feature</div>
+      <h1 class="section-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true" style="vertical-align:-3px; margin-right:4px;">
+          <circle cx="12" cy="8" r="6"/>
+          <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+        </svg>
+        {{ feature.title }}
+      </h1>
+    </div>
+    <a href="{% url 'core:recent_features' %}"
+       title="Back to Recent Features"
+       style="margin-left:auto; display:flex; align-items:center; justify-content:center;
+              width:28px; height:28px; border-radius:50%;
+              color:var(--grey); text-decoration:none; flex-shrink:0;
+              transition:background 0.12s, color 0.12s;"
+       onmouseover="this.style.background='var(--paper-dark)';this.style.color='var(--ink)';"
+       onmouseout="this.style.background='';this.style.color='var(--grey)';">
+      &#x2715;
+    </a>
+  </div>
+
+  <div style="background:white; border:2px solid var(--border); border-radius:10px;
+              padding:28px 32px; max-width:700px; margin-bottom:24px;">
+    <div style="font-size:0.82rem; color:var(--grey); margin-bottom:12px;
+                font-family:var(--mono); letter-spacing:0.5px;">
+      {{ feature.date }}
+    </div>
+    <p style="font-size:1.05rem; color:var(--ink); line-height:1.65; margin:0;">
+      {{ feature.description }}
+    </p>
+  </div>
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    {% if prev_feature %}
+    <a href="{% url 'core:feature_detail' prev_feature.id %}" class="btn">
+      &#8249; {{ prev_feature.title }}
+    </a>
+    {% endif %}
+    {% if next_feature %}
+    <a href="{% url 'core:feature_detail' next_feature.id %}" class="btn">
+      {{ next_feature.title }} &#8250;
+    </a>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+.rf-detail-page {
+  padding: 1.5rem 2rem 3rem;
+  /* No max-width here — section-header must span the full content width
+     so that margin-left:auto on the close button truly right-justifies it. */
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+{% endblock %}

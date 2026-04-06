@@ -1,5 +1,32 @@
 from .models import SiteSettings, UserPreferences
 
+
+def recent_feature_banner(request):
+    """
+    Injects `recent_feature_banner` into every template context.
+    Value is the latest feature dict when it should be shown, else None.
+
+    Shown when:
+      - User is authenticated
+      - A latest feature exists
+      - User has not dismissed this specific feature ID
+    """
+    from .recent_features import get_latest
+    from .ui_settings import get_ui_settings
+
+    if not request.user.is_authenticated:
+        return {"recent_feature_banner": None}
+
+    latest = get_latest()
+    if not latest:
+        return {"recent_feature_banner": None}
+
+    prefs = get_ui_settings(request.user, "recent_features")
+    if prefs.get("dismissed_id", "") == latest["id"]:
+        return {"recent_feature_banner": None}
+
+    return {"recent_feature_banner": latest}
+
 _SIDEBAR_DEFAULT = 280
 
 

@@ -132,3 +132,58 @@
     init();
   }
 })();
+
+// ── Recent feature banner ─────────────────────────────────────────────────────
+(function () {
+  var featureBanner = document.getElementById("bn-feature-banner");
+  if (!featureBanner) return;
+
+  var featureId  = featureBanner.dataset.featureId;
+  var dismissUrl = featureBanner.dataset.dismissUrl;
+  var csrf       = featureBanner.dataset.csrf;
+
+  function dismissBanner() {
+    featureBanner.style.display = "none";
+    return fetch(dismissUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      credentials: "same-origin",
+      body: JSON.stringify({ id: featureId }),
+    });
+  }
+
+  // Close button — dismiss and stay on page
+  var bannerClose = featureBanner.querySelector(".bn-fb-close");
+  if (bannerClose) {
+    bannerClose.onclick = function (e) {
+      e.stopPropagation();
+      dismissBanner().catch(function () {});
+    };
+  }
+
+  // "See all features" link — dismiss then navigate
+  var bannerLink = featureBanner.querySelector(".bn-fb-link");
+  if (bannerLink) {
+    bannerLink.onclick = function (e) {
+      e.preventDefault();
+      var href = bannerLink.href;
+      dismissBanner()
+        .catch(function () {})
+        .finally(function () { window.location.href = href; });
+    };
+  }
+
+  // Tap description to expand full text; tap again to collapse.
+  // Clicks on the actions wrapper (link + close) are ignored.
+  var descEl    = document.getElementById("bn-fb-desc-text");
+  var fbInner   = featureBanner.querySelector(".bn-fb-inner");
+  var fbActions = featureBanner.querySelector(".bn-fb-actions");
+  if (descEl && fbInner) {
+    fbInner.style.cursor = "pointer";
+    fbInner.addEventListener("click", function (e) {
+      if (fbActions && fbActions.contains(e.target)) return;
+      var expanded = descEl.classList.toggle("bn-fb-desc-expanded");
+      fbInner.title = expanded ? "Tap to collapse" : "";
+    });
+  }
+})();

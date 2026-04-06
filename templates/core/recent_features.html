@@ -1,0 +1,187 @@
+{% extends "messaging/layout.html" %}
+{% load static %}
+
+{% block title %}Recent Features — Breaking News{% endblock %}
+
+{% block shell_class %}app-shell--no-sidebar{% endblock %}
+{% block sidebar %}{% endblock %}
+
+{% block main_content %}
+<div class="rf-page">
+  <div class="rf-page-header">
+    <h1 class="rf-page-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true" style="vertical-align:-3px; margin-right:4px;">
+        <circle cx="12" cy="8" r="6"/>
+        <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+      </svg>
+      Recent Features
+    </h1>
+  </div>
+
+  <table class="rf-table">
+    <thead>
+      <tr>
+        <th style="width:1%; white-space:nowrap;">Date</th>
+        <th>Feature &amp; Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for feature in features_page %}
+      <tr class="rf-clickable-row{% if forloop.first %} rf-row-latest{% endif %}"
+          data-href="{% url 'core:feature_detail' feature.id %}"
+          style="cursor:pointer;">
+        <td style="white-space:nowrap; color:var(--grey); font-size:0.82rem; vertical-align:top; padding-top:6px;">
+          {{ feature.date|date:"M j, Y" }}
+        </td>
+        <td style="padding:5px 8px;">
+          <div style="font-weight:600; margin-bottom:2px;">
+            {% if feature.id|slice:":4" == "fix_" %}
+              <span class="rf-fix-badge">Fix</span>
+            {% elif forloop.first %}
+              <span class="rf-new-badge">New</span>
+            {% endif %}
+            {{ feature.title }}
+          </div>
+          <div style="font-size:0.82rem; color:var(--grey); white-space:normal;">{{ feature.description }}</div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="2" style="text-align:center; color:var(--grey); padding:32px;">
+          No features listed yet.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if features_page.has_other_pages %}
+  <nav class="rf-pagination">
+    {% if features_page.has_previous %}
+      <a href="?page={{ features_page.previous_page_number }}">&#8592; Prev</a>
+    {% else %}
+      <span class="disabled">&#8592; Prev</span>
+    {% endif %}
+
+    {% for num in features_page.paginator.page_range %}
+      {% if num == features_page.number %}
+        <span class="current-page">{{ num }}</span>
+      {% else %}
+        <a href="?page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if features_page.has_next %}
+      <a href="?page={{ features_page.next_page_number }}">Next &#8594;</a>
+    {% else %}
+      <span class="disabled">Next &#8594;</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+</div>
+
+<style>
+.rf-page {
+  padding: 1.5rem 2rem 3rem;
+  max-width: 900px;
+}
+.rf-page-header {
+  margin-bottom: 1.25rem;
+}
+.rf-page-title {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+}
+.rf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.rf-table thead tr {
+  background: var(--ink);
+  color: var(--gold);
+}
+.rf-table thead th {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 7px 8px;
+  text-align: center;
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+}
+.rf-table thead th:first-child { text-align: left; }
+.rf-table thead th:last-child { border-right: none; }
+.rf-table tbody td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.55rem 0.75rem;
+}
+.rf-table tbody tr:nth-child(even) td { background: var(--paper-dark); }
+.rf-clickable-row:hover td { background: #e8d8b8; }
+.rf-table tbody tr:nth-child(even):hover td { background: #e8d8b8; }
+.rf-row-latest td { background: #fdfaf5 !important; }
+.rf-new-badge {
+  display: inline-block;
+  background: var(--action);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.rf-fix-badge {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.rf-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+.rf-pagination a,
+.rf-pagination span {
+  display: inline-block;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.1s;
+}
+.rf-pagination a:hover { background: var(--paper-dark); }
+.rf-pagination .current-page { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.rf-pagination .disabled { color: var(--border); border-color: var(--border); cursor: default; }
+</style>
+
+<script>
+document.querySelectorAll(".rf-clickable-row").forEach(function (row) {
+  row.addEventListener("click", function () {
+    window.location.href = row.dataset.href;
+  });
+});
+</script>
+{% endblock %}

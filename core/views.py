@@ -81,7 +81,61 @@ def reset_preferences(request):
     from .models import UserPreferences
 
     prefs = UserPreferences.for_user(request.user)
+    from .ui_settings import reset_ui_settings
+
     prefs.sidebar_width = _SIDEBAR_DEFAULT
     prefs.history_expand_all = False
     prefs.save(update_fields=["sidebar_width", "history_expand_all"])
+    reset_ui_settings(request.user)
     return redirect(request.POST.get("next", "messaging:index"))
+
+
+@login_required
+def recent_features(request):
+    """Display the full paginated list of recent features."""
+    import json as _json
+    from django.core.paginator import Paginator
+    from .recent_features import get_features
+
+    features_list = get_features()
+    paginator = Paginator(features_list, 20)
+    features_page = paginator.get_page(request.GET.get("page", 1))
+    return render(request, "core/recent_features.html", {"features_page": features_page})
+
+
+@login_required
+def feature_detail(request, feature_id):
+    """Display full detail for a single recent feature."""
+    from .recent_features import get_features
+
+    features = get_features()
+    feature = next((f for f in features if f["id"] == feature_id), None)
+    if feature is None:
+        from django.http import Http404
+        raise Http404("Feature not found")
+    idx = features.index(feature)
+    prev_feature = features[idx - 1] if idx > 0 else None
+    next_feature = features[idx + 1] if idx < len(features) - 1 else None
+    return render(request, "core/feature_detail.html", {
+        "feature": feature,
+        "prev_feature": prev_feature,
+        "next_feature": next_feature,
+    })
+
+
+@login_required
+@require_POST
+def api_dismiss_recent_feature(request):
+    """POST — save dismissal of a feature banner by ID."""
+    import json as _json
+    from .ui_settings import set_ui_settings
+
+    try:
+        data = _json.loads(request.body)
+    except (_json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    feature_id = data.get("id", "")
+    if not feature_id:
+        return JsonResponse({"error": "id required"}, status=400)
+    set_ui_settings(request.user, "recent_features", {"dismissed_id": feature_id})
+    return JsonResponse({"ok": True})

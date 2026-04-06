@@ -45,6 +45,7 @@
           Account &#9660;
         </button>
         <div class="acct-dropdown" id="acct-dropdown" role="menu">
+          <a href="{% url 'core:recent_features' %}" class="acct-item" role="menuitem">Recent Features</a>
           <form method="post" action="{% url 'core:reset_preferences' %}">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.path }}">
@@ -56,6 +57,34 @@
 
     </nav>
   </header>
+
+  {% if recent_feature_banner %}
+  <div id="bn-feature-banner"
+       data-feature-id="{{ recent_feature_banner.id }}"
+       data-dismiss-url="{% url 'core:api_dismiss_recent_feature' %}"
+       data-csrf="{{ csrf_token }}">
+    <div class="bn-fb-inner">
+      <span class="bn-fb-eyebrow{% if recent_feature_banner.id|slice:":4" == "fix_" %} bn-fb-eyebrow-fix{% endif %}">{% if recent_feature_banner.id|slice:":4" == "fix_" %}Bug Fix{% else %}What's New{% endif %}</span>
+      <span class="bn-fb-title">{{ recent_feature_banner.title }}</span>
+      <span class="bn-fb-sep">–</span>
+      <span class="bn-fb-desc" title="{{ recent_feature_banner.description }}" id="bn-fb-desc-text">{{ recent_feature_banner.description }}</span>
+      <span class="bn-fb-actions">
+        <a href="{% url 'core:recent_features' %}" class="bn-fb-link" title="See all recent features">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="9" y1="6" x2="21" y2="6"/>
+            <line x1="9" y1="12" x2="21" y2="12"/>
+            <line x1="9" y1="18" x2="21" y2="18"/>
+            <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+            <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </a>
+        <button class="bn-fb-close" aria-label="Dismiss">&#x2715;</button>
+      </span>
+    </div>
+  </div>
+  {% endif %}
 
   {% block sidebar %}
   <!-- Sidebar / History -->
