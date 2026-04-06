@@ -48,34 +48,35 @@ recent_features:
       Eliminate stale DB connection errors causing 30s send delays
   - id: feat_2026-03-20_add
     date: 2026-03-20
-    title: History
+    title: History Trash
     description: >
-      add pop-over smart delete functionality
+      Add pop-over smart delete functionality to history items with trash icon.
   - id: fix_2026-03-19_prevent
     date: 2026-03-19
-    title: Fix auth
+    title: Auth Bug
     description: >
-      prevent CSRF 403 on login after sleep/wake
+      Prevent CSRF 403 on login after sleep/wake
   - id: feat_2026-03-19_update
     date: 2026-03-19
-    title: History
+    title: PDFs in History
     description: >
-      update display style for pdf messages without text
+      Update display style for pdf messages without text
   - id: fix_2026-03-19_fix
     date: 2026-03-19
-    title: Fix history
+    title: History Bug
     description: >
-      fix history list scroll issues on select and arrow navigation
+      Fix list scroll issues on History item select and arrow navigation
   - id: feat_2026-03-19_list
     date: 2026-03-19
-    title: History
+    title: History Updates
     description: >
-      list updates for timestamps, expand, and delete
+      List updates for timestamps, expand, and delete
   - id: feat_2026-03-18_history_list
     date: 2026-03-18
-    title: Remote Inserts and Deletes
+    title: Smart History
     description: >
-      The history list detects inserts and deletes
+      The history list auto-detects inserts and deletes and flashes a notification
+      for new or deleted messages
   - id: feat_2026-03-18_Add
     date: 2026-03-18
     title: History Item Spin-down
@@ -85,17 +86,17 @@ recent_features:
     date: 2026-03-18
     title: History Panel Resize
     description: >
-      resizable history panel and navbar overhaul
+      Resizable history panel and navbar overhaul
   - id: fix_2026-03-18_prevent
     date: 2026-03-18
     title: Fix Data Shutdown
     description: >
-      prevent connection exhaustion under SSE load
+      Prevent connection exhaustion under SSE load
   - id: feat_2026-03-17_send
     date: 2026-03-17
     title: optimize(send)
     description: >
-      send messages faster
+      Send messages faster
   - id: feat_2026-03-09_API
     date: 2026-03-09
     title: API
@@ -145,7 +146,7 @@ recent_features:
     date: 2026-03-04
     title: App Icon
     description: >
-      update the Breaking News image icon  with a dark background to match the app bg color
+      Update the Breaking News image icon  with a dark background to match the app bg color
   - id: feat_2026-03-04_support
     date: 2026-03-04
     title: Slack Attachments
@@ -227,9 +228,9 @@ recent_features:
     title: Fast Send Hotkey
     description: >
       The keyboard Enter key now sends your message supporting rapid-fire distribution.
-       Pressing Shift+Enter creates a new line without sending, allowing for multi-line messages.
-       This feature is designed to enhance the speed and efficiency of message sending,
-       making it easier to communicate quickly.
+      Pressing Shift+Enter creates a new line without sending, allowing for multi-line messages.
+      This feature is designed to enhance the speed and efficiency of message sending,
+      making it easier to communicate quickly.
   - id: feat_2026-02-28_allow
     date: 2026-02-28
     title: Send

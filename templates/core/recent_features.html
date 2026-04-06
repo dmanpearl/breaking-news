@@ -20,64 +20,75 @@
     </h1>
   </div>
 
-  <table class="rf-table">
-    <thead>
-      <tr>
-        <th style="width:1%; white-space:nowrap;">Date</th>
-        <th>Feature &amp; Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for feature in features_page %}
-      <tr class="rf-clickable-row{% if forloop.first %} rf-row-latest{% endif %}"
-          data-href="{% url 'core:feature_detail' feature.id %}"
-          style="cursor:pointer;">
-        <td style="white-space:nowrap; color:var(--grey); font-size:0.82rem; vertical-align:top; padding-top:6px;">
-          {{ feature.date|date:"M j, Y" }}
-        </td>
-        <td style="padding:5px 8px;">
-          <div style="font-weight:600; margin-bottom:2px;">
-            {% if feature.id|slice:":4" == "fix_" %}
-              <span class="rf-fix-badge">Fix</span>
-            {% elif forloop.first %}
-              <span class="rf-new-badge">New</span>
-            {% endif %}
-            {{ feature.title }}
-          </div>
-          <div style="font-size:0.82rem; color:var(--grey); white-space:normal;">{{ feature.description }}</div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="2" style="text-align:center; color:var(--grey); padding:32px;">
-          No features listed yet.
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="rf-table-wrap">
+    <table class="rf-table">
+      <thead>
+        <tr>
+          <th style="width:1%; white-space:nowrap;">Date</th>
+          <th>Feature &amp; Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for feature in features_page %}
+        <tr class="rf-clickable-row{% if forloop.first %} rf-row-latest{% endif %}"
+            data-href="{% url 'core:feature_detail' feature.id %}"
+            style="cursor:pointer;">
+          <td style="white-space:nowrap; color:var(--grey); font-size:0.82rem; vertical-align:top; padding-top:6px;">
+            {{ feature.date|date:"M j, Y" }}
+          </td>
+          <td style="padding:5px 8px;">
+            <div style="font-weight:600; margin-bottom:2px;">
+              {% if feature.id|slice:":4" == "fix_" %}
+                <span class="rf-fix-badge">Fix</span>
+              {% elif forloop.first %}
+                <span class="rf-new-badge">New</span>
+              {% endif %}
+              {{ feature.title }}
+            </div>
+            <div style="font-size:0.82rem; color:var(--grey); white-space:normal;">{{ feature.description }}</div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2" style="text-align:center; color:var(--grey); padding:32px;">
+            No features listed yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
   {% if features_page.has_other_pages %}
   <nav class="rf-pagination">
     {% if features_page.has_previous %}
-      <a href="?page={{ features_page.previous_page_number }}">&#8592; Prev</a>
+      <a href="?page=1" title="First page">«</a>
+      <a href="?page={{ features_page.previous_page_number }}" title="Previous page">‹</a>
     {% else %}
-      <span class="disabled">&#8592; Prev</span>
+      <span class="disabled" title="First page">«</span>
+      <span class="disabled" title="Previous page">‹</span>
     {% endif %}
 
     {% for num in features_page.paginator.page_range %}
-      {% if num == features_page.number %}
-        <span class="current-page">{{ num }}</span>
-      {% else %}
+      {% if features_page.number == num %}
+        <span class="current">{{ num }}</span>
+      {% elif num > features_page.number|add:'-3' and num < features_page.number|add:'3' %}
         <a href="?page={{ num }}">{{ num }}</a>
       {% endif %}
     {% endfor %}
 
     {% if features_page.has_next %}
-      <a href="?page={{ features_page.next_page_number }}">Next &#8594;</a>
+      <a href="?page={{ features_page.next_page_number }}" title="Next page">›</a>
+      <a href="?page={{ features_page.paginator.num_pages }}" title="Last page">»</a>
     {% else %}
-      <span class="disabled">Next &#8594;</span>
+      <span class="disabled" title="Next page">›</span>
+      <span class="disabled" title="Last page">»</span>
     {% endif %}
+
+    <span class="rf-pg-label">
+      Page {{ features_page.number }} of {{ features_page.paginator.num_pages }}
+      ({{ features_page.paginator.count }} total)
+    </span>
   </nav>
   {% endif %}
 </div>
@@ -94,11 +105,19 @@
   font-family: var(--display);
   font-size: 1.6rem;
   letter-spacing: 0.06em;
+  color: #5c2d0e;           /* matches rating-ranch --brand-brown; SVG inherits via currentColor */
+}
+.rf-table-wrap {
+  overflow-x: auto;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .rf-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  background: white;
 }
 .rf-table thead tr {
   background: var(--ink);
@@ -156,25 +175,48 @@
 .rf-pagination {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-top: 1rem;
-  font-family: var(--mono);
-  font-size: 0.75rem;
+  gap: 6px;
+  margin-top: 16px;
   flex-wrap: wrap;
 }
 .rf-pagination a,
-.rf-pagination span {
-  display: inline-block;
-  padding: 0.3rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--ink);
+.rf-pagination span:not(.rf-pg-label) {
+  padding: 5px 11px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-family: var(--sans);
+  font-weight: 600;
   text-decoration: none;
-  transition: background 0.1s;
+  border: 1px solid var(--border);
 }
-.rf-pagination a:hover { background: var(--paper-dark); }
-.rf-pagination .current-page { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.rf-pagination .disabled { color: var(--border); border-color: var(--border); cursor: default; }
+.rf-pagination a {
+  color: var(--ink);
+  background: white;
+}
+.rf-pagination a:hover {
+  background: var(--action);
+  color: white;
+  border-color: var(--action);
+  text-decoration: none;
+}
+.rf-pagination .current {
+  background: var(--ink);
+  color: var(--gold);
+  border-color: var(--ink);
+}
+.rf-pagination .disabled {
+  color: var(--border);
+  background: var(--paper-dark);
+}
+.rf-pg-label {
+  border: none;
+  font-size: 0.78rem;
+  color: var(--grey);
+  margin-left: 8px;
+  font-family: var(--sans);
+  font-weight: 400;
+  letter-spacing: 0;
+}
 </style>
 
 <script>
