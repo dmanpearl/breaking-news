@@ -210,7 +210,7 @@ a:hover {
 }
 
 .bn-fb-inner:has(.bn-fb-desc-expanded) .bn-fb-eyebrow {
-  top: 3px;
+  top: 4px;
 }
 
 .bn-fb-title {
