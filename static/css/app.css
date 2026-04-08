@@ -1,6 +1,6 @@
 /* cache-bust: v2 */
 /* ── Breaking News – App CSS ── */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap");
 
 /* ── Variables ── */
 :root {
@@ -17,9 +17,9 @@
   --sidebar-w: 280px;
   --header-h: 60px;
   --radius: 2px;
-  --mono: 'IBM Plex Mono', monospace;
-  --sans: 'IBM Plex Sans', sans-serif;
-  --display: 'Bebas Neue', sans-serif;
+  --mono: "IBM Plex Mono", monospace;
+  --sans: "IBM Plex Sans", sans-serif;
+  --display: "Bebas Neue", sans-serif;
 }
 
 * {
@@ -209,6 +209,10 @@ a:hover {
   background: var(--red);
 }
 
+.bn-fb-inner:has(.bn-fb-desc-expanded) .bn-fb-eyebrow {
+  top: 3px;
+}
+
 .bn-fb-title {
   flex-shrink: 0;
   font-family: var(--display);
@@ -267,7 +271,9 @@ a:hover {
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 1rem;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .bn-fb-link:hover {
@@ -287,7 +293,9 @@ a:hover {
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 0.9rem;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 .bn-fb-close:hover {
@@ -343,7 +351,9 @@ a:hover {
   color: var(--grey);
   border-radius: var(--radius);
   padding: 0;
-  transition: color 0.1s, background 0.1s;
+  transition:
+    color 0.1s,
+    background 0.1s;
 }
 
 .sidebar-icon-btn:hover {
@@ -797,7 +807,9 @@ a:hover {
   border: 2px dashed var(--border);
   border-radius: var(--radius);
   padding: 0.75rem;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   cursor: pointer;
 }
 
@@ -925,7 +937,10 @@ a:hover {
   font-size: 0.85rem;
   margin-bottom: 0.5rem;
   border-left: 4px solid transparent;
-  transition: opacity 0.4s ease, margin 0.4s ease, padding 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    margin 0.4s ease,
+    padding 0.4s ease;
 }
 
 .flash.success {
@@ -1125,7 +1140,6 @@ a:hover {
   color: var(--ink);
 }
 
-
 /* ── Sidebar drag handle ── */
 .sidebar-drag-handle {
   position: absolute;
@@ -1201,7 +1215,9 @@ a:hover {
   letter-spacing: 0.08em;
   text-align: left;
   text-decoration: none;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 }
 
 .acct-item:hover {
@@ -1247,7 +1263,9 @@ a:hover {
   border-radius: 4px;
   color: var(--grey);
   text-decoration: none;
-  transition: color 0.1s, background 0.1s;
+  transition:
+    color 0.1s,
+    background 0.1s;
 }
 
 .history-context-btn:hover {
@@ -1294,11 +1312,11 @@ a:hover {
 }
 
 .new-msg-dot--red.new-msg-dot--pulse {
-  animation: dot-pulse-red 1.0s ease-out infinite;
+  animation: dot-pulse-red 1s ease-out infinite;
 }
 
 .new-msg-dot--pulse {
-  animation: dot-pulse 1.0s ease-out infinite;
+  animation: dot-pulse 1s ease-out infinite;
 }
 
 @keyframes dot-pulse-red {

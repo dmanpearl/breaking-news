@@ -19,6 +19,17 @@ Sister repo: `../breaking-news-reader/` (public GitHub, static web app — separ
 | `connections` | ConnectionDiscord, ConnectionSlack — dispatch and edit/delete logic in `services.py` |
 | `api` | Read-only REST API, SSE stream, APIKey model (SHA-256 hashed), usage logging |
 
+## Code formatting — mandatory after every edit
+
+After editing **any** file, run the appropriate formatter before finishing:
+
+| File type | Command |
+|-----------|---------|
+| Python (`.py`) | `source .venv/bin/activate && black <file>` |
+| CSS / HTML | `npx prettier --write <file>` |
+
+Run formatters even for single-line changes. The IDE auto-formats on save; if the file is not already formatted, a one-line diff becomes hundreds of lines. The console and IDE may use slightly different formatter versions — that risk is acceptable and far smaller than not formatting at all.
+
 ## Dev setup
 ```bash
 source .venv/bin/activate
