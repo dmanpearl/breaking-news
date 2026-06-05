@@ -69,13 +69,13 @@ WSGI_APPLICATION = "breaking_news.wsgi.application"
 
 import dj_database_url  # type: ignore
 
-# DATABASE_URL is the private internal Railway URL -- sub-millisecond
-# latency within the Railway network. Always prefer this when available.
-# DATABASE_PUBLIC_URL is the externally reachable proxy -- used only for
-# local dev (railway run) where the internal URL is not reachable.
-DATABASE_URL = config("DATABASE_URL", default="") or config(
-    "DATABASE_PUBLIC_URL", default=""
-)
+# DATABASE_URL is the private internal Railway URL (postgres.railway.internal)
+# which only resolves within Railway's network. When running `railway run`
+# locally that hostname is unreachable, so fall back to DATABASE_PUBLIC_URL.
+_db_url = config("DATABASE_URL", default="")
+if "railway.internal" in _db_url:
+    _db_url = config("DATABASE_PUBLIC_URL", default=_db_url)
+DATABASE_URL = _db_url or config("DATABASE_PUBLIC_URL", default="")
 
 if DATABASE_URL:
     DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=0)}
